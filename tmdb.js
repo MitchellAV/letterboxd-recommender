@@ -1,5 +1,6 @@
 const axios = require("axios");
 const fs = require("fs");
+const dotenv = require("dotenv").config();
 const scrapeTMDB = async (start_id, end_id, page, database) => {
 	let id = start_id;
 	const itemsPerPage = 1000;
@@ -36,7 +37,7 @@ const scrapeTMDB = async (start_id, end_id, page, database) => {
 			}
 			try {
 				book = await axios.get(
-					`https://api.themoviedb.org/3/movie/${id}?api_key=65502f9c3f1d231faf09f39321af5162`
+					`https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.TMDB_API_KEY}`
 				);
 				consec_errors = 0;
 				json.posts.push(book.data);
