@@ -10,7 +10,7 @@ const getMovies = async (user) => {
 			headless: false
 		});
 		const page = await browser.newPage();
-		const json = { movies: [] };
+		const json = { movies: [], avg_rating: null };
 		let pagenum = 1;
 		let finished = false;
 		while (!finished) {
@@ -56,6 +56,16 @@ const getMovies = async (user) => {
 				finished = true;
 			}
 		}
+		let num_of_movies = 0;
+		let sum_rating = 0;
+		json.movies.forEach((movie) => {
+			if (movie.rating !== null) {
+				num_of_movies++;
+				sum_rating += movie.rating;
+			}
+		});
+		let avg_rating = sum_rating / num_of_movies;
+		json.avg_rating = avg_rating;
 		await fs.writeFile(
 			`./json/users/${user}-movies.json`,
 			JSON.stringify(json)
