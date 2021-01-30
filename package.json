@@ -1,0 +1,19 @@
+{
+	"name": "letterboxd-movie-recommender",
+	"version": "1.0.0",
+	"description": "",
+	"main": "server.js",
+	"scripts": {
+		"users": "node getletterboxd.js"
+	},
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"axios": "^0.21.1",
+		"cheerio": "^1.0.0-rc.5",
+		"fs": "0.0.1-security",
+		"puppeteer": "^5.5.0",
+		"puppeteer-extra": "^3.1.16",
+		"puppeteer-extra-plugin-stealth": "^2.6.7"
+	}
+}
