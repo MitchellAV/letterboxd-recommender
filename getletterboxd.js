@@ -2,10 +2,13 @@ const puppeteer = require("puppeteer-extra");
 const cheerio = require("cheerio");
 const fs = require("fs").promises;
 
+const { get_database } = require("./util");
+
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
 const getMovies = async (user) => {
 	try {
+		const database = [...get_database(0, Infinity)];
 		const browser = await puppeteer.launch({
 			headless: false
 		});
@@ -26,9 +29,10 @@ const getMovies = async (user) => {
 			const children = $("ul.poster-list").children();
 			if (children.length !== 0) {
 				for (let i = 0; i < children.length; i++) {
-					const movie = { title: "", rating: null };
+					const movie = { id: null, title: null, rating: null };
 
 					const el = children[i];
+
 					const film_name = $(el)
 						.find("div")
 						.attr("data-film-name")
@@ -48,7 +52,23 @@ const getMovies = async (user) => {
 						movie.rating = film_rating;
 					}
 
+					const film_link = $(el).find("div").attr("data-film-link");
+
+					const moviePage = await browser.newPage();
+					const movieUrl = `https://letterboxd.com/${film_link}`;
+
+					await moviePage.goto(movieUrl, {
+						waitUntil: "domcontentloaded"
+					});
+
+					const movieContent = await moviePage.content();
+
+					const $m = cheerio.load(movieContent);
+
+					const film_id = $m("body").attr("data-tmdb-id");
+					movie.id = film_id;
 					json.movies.push(movie);
+					await moviePage.close();
 				}
 				pagenum++;
 			} else {
