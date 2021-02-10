@@ -1,0 +1,66 @@
+<% recommendations.forEach(book=> { const {id,title,overview,vote_count, vote_average, release_date, runtime,
+	revenue,genres, original_title, original_language, tags,score,imdb_id,budget}= book %> <article class="book">
+		<h2 class="book-title">
+			<%= title %>
+		</h2>
+		<div class="info">
+			<img src='../thumbnails/<%=id %>-thumb.jpg' class=" project-img" loading='lazy' alt="<%= id%>" />
+			<div>
+				<p><b>Original Title:</b>
+					<%= original_title %>
+				</p>
+				<p><b>ID:</b>
+					<a class='tag' href=" /?id=<%=id%>">
+						<%= id%>
+					</a>
+				</p>
+				<p><b>IMDB:</b>
+					<a class='tag' href="https://www.imdb.com/title/<%=imdb_id  %> ">
+						<%= imdb_id%>
+					</a>
+				</p>
+				<p><b>Summary:</b>
+					<%= overview %>
+				</p>
+				<p><b># of Ratings:</b>
+					<%= vote_count %>
+				</p>
+				<p><b>Avg. Rating:</b>
+					<%= vote_average %>
+				</p>
+				<p><b>Release Date:</b>
+					<%= release_date %>
+				</p>
+				<p><b>Runtime:</b>
+					<%= runtime %>
+				</p>
+				<p><b>Revenue:</b>
+					<%= revenue %>
+				</p>
+				<p><b>Original Language:</b>
+					<%= original_language %>
+				</p>
+				<p><b>Score:</b>
+					<%= score.toFixed(3) %>
+				</p>
+				<p><b>Budget:</b>
+					<%= budget %>
+				</p>
+				<p><b>Genres:</b></p>
+				<div class='tags'>
+					<% genres.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+							<%= tag%>
+						</a>
+						<%})%>
+				</div>
+				<p><b>Tags:</b></p>
+				<div class='tags'>
+					<% tags.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+							<%= tag%>
+						</a>
+						<%})%>
+				</div>
+			</div>
+		</div>
+	</article>
+	<% }) %>

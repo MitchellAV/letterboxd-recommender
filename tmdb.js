@@ -48,7 +48,7 @@ const scrapeTMDB = async (start_id, end_id, page, database) => {
 				if (consec_errors > consecLimit) {
 					isFinished = true;
 				}
-				console.log(`id: ${id} - ${err.response.data.status_message}`);
+				console.log(`id: ${id} - Not found`);
 			}
 			id++;
 		}

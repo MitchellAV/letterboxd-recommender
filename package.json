@@ -4,17 +4,27 @@
 	"description": "",
 	"main": "server.js",
 	"scripts": {
-		"users": "node getletterboxd.js"
+		"users": "node getletterboxd.js",
+		"start": "node --max-old-space-size=8192 server.js",
+		"dev": "nodemon server.js"
 	},
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
 		"axios": "^0.21.1",
 		"cheerio": "^1.0.0-rc.5",
+		"cors": "^2.8.5",
 		"dotenv": "^8.2.0",
+		"ejs": "^3.1.5",
+		"express": "^4.17.1",
 		"fs": "0.0.1-security",
+		"mathjs": "^8.1.1",
 		"puppeteer": "^5.5.0",
-		"puppeteer-extra": "^3.1.16",
+		"puppeteer-extra": "^3.1.15",
+		"puppeteer-extra-plugin-recaptcha": "^3.3.0",
 		"puppeteer-extra-plugin-stealth": "^2.6.7"
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.6"
 	}
 }

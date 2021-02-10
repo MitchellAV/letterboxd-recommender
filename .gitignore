@@ -1,3 +1,5 @@
-/json
-/node_modules
-.env
+*.env
+node_modules
+json/
+public/thumbnails/
+.vscode/
