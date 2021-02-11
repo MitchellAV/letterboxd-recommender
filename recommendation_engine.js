@@ -149,7 +149,7 @@ const get_recommended = async (
 			// console.time("recommend");
 			recommend.push(book);
 			// console.timeEnd("recommend");
-			if (i % 10000 == 0) {
+			if (i % 1000 == 0) {
 				console.log(`Scored ${i + 1}/${database_size}`);
 			}
 		}
@@ -225,19 +225,22 @@ const gen_tag_count = (all_books, ref_tags) => {
 		const tag = ref_tags[i];
 		const count = count_docs_with_tag(tag, all_books);
 		count_books_tag.push(count);
+		if (i % 1000 == 0) {
+			console.log(`Counted ${i + 1}/${ref_tags_length}`);
+		}
 	}
 	return count_books_tag;
 };
 const get_tag_count = async (all_books, ref_tags, name) => {
 	let count_books_tag;
 	try {
-		count_books_tag = require(`../json/${name}_tag_count.json`).list;
+		count_books_tag = require(`./json/${name}_tag_count.json`).list;
 		if (count_books_tag.length !== ref_tags.length) {
 			throw new Error("Length different");
 		}
 	} catch (err) {
 		count_books_tag = gen_tag_count(all_books, ref_tags);
-		console.log("created TF-IDF database vectors");
+		console.log("created tag count");
 		const json = { list: [...count_books_tag] };
 		await fs.writeFile(
 			`./json/${name}_tag_count.json`,
