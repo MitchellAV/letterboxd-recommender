@@ -77,10 +77,15 @@ const scrapeTMDBCredits = async (
 	const itemsPerPage = 1000;
 	const consecLimit = 1000;
 	let isFinished = false;
+	let credits_ids = [];
 	let database_ids = [];
+	for (let i = 0; i < database.length; i++) {
+		const id = database[i].id;
+		database_ids.push(id);
+	}
 	for (let i = 0; i < databaseCredits.length; i++) {
 		const id = databaseCredits[i].id;
-		database_ids.push(id);
+		credits_ids.push(id);
 	}
 	while (!isFinished) {
 		console.log(`Page: ${page}`);
@@ -94,15 +99,26 @@ const scrapeTMDBCredits = async (
 		let numErrors = 0;
 		let consec_errors = 0;
 		while (id < startId + itemsPerPage && id <= end_id && !isFinished) {
-			let found = false;
+			let skip = true;
 			for (let i = 0; i < database_ids.length; i++) {
 				let database_id = parseInt(database_ids[i]);
 				if (database_id == parseInt(id)) {
-					found = true;
+					skip = false;
 					break;
 				}
 			}
-			if (found) {
+			if (skip) {
+				id++;
+				continue;
+			}
+			for (let i = 0; i < credits_ids.length; i++) {
+				let database_id = parseInt(credits_ids[i]);
+				if (database_id == parseInt(id)) {
+					skip = true;
+					break;
+				}
+			}
+			if (skip) {
 				id++;
 				continue;
 			}
@@ -148,10 +164,15 @@ const scrapeTMDBKeywords = async (
 	const itemsPerPage = 1000;
 	const consecLimit = 1000;
 	let isFinished = false;
+	let keywords_ids = [];
 	let database_ids = [];
+	for (let i = 0; i < database.length; i++) {
+		const id = database[i].id;
+		database_ids.push(id);
+	}
 	for (let i = 0; i < databaseKeywords.length; i++) {
 		const id = databaseKeywords[i].id;
-		database_ids.push(id);
+		keywords_ids.push(id);
 	}
 	while (!isFinished) {
 		console.log(`Page: ${page}`);
@@ -165,15 +186,26 @@ const scrapeTMDBKeywords = async (
 		let numErrors = 0;
 		let consec_errors = 0;
 		while (id < startId + itemsPerPage && id <= end_id && !isFinished) {
-			let found = false;
+			let skip = true;
 			for (let i = 0; i < database_ids.length; i++) {
 				let database_id = parseInt(database_ids[i]);
 				if (database_id == parseInt(id)) {
-					found = true;
+					skip = false;
 					break;
 				}
 			}
-			if (found) {
+			if (skip) {
+				id++;
+				continue;
+			}
+			for (let i = 0; i < keywords_ids.length; i++) {
+				let database_id = parseInt(keywords_ids[i]);
+				if (database_id == parseInt(id)) {
+					skip = true;
+					break;
+				}
+			}
+			if (skip) {
 				id++;
 				continue;
 			}

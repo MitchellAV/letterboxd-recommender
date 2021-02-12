@@ -1232,7 +1232,7 @@ let common_tags = [
 ];
 
 const cleanDatabase = (input_array) => {
-	const output_array = [];
+	let output_array = [];
 	input_array.forEach((movie) => {
 		const {
 			id,
@@ -1326,14 +1326,33 @@ const cleanDatabase = (input_array) => {
 				filteredBook.tags.push(company);
 			}
 		}
-
 		output_array.push(filteredBook);
 	});
+	output_array = output_array.filter((movie) => movie.imdb_id !== "");
+	output_array = output_array.filter(
+		(movie) => movie.production_companies.lentgh !== 0
+	);
+	output_array = output_array.filter(
+		(movie) => movie.spoken_languages.lentgh !== 0
+	);
+	output_array = output_array.filter(
+		(movie) => movie.production_countries.lentgh !== 0
+	);
+	output_array = output_array.filter((movie) => movie.genres.lentgh !== 0);
+	output_array = output_array.filter((movie) => movie.release_date !== "");
+	output_array = output_array.filter((movie) => movie.thumbnail_url !== "");
+	output_array = output_array.filter((movie) => movie.adult !== true);
+	output_array = output_array.filter((movie) => movie.vote_count !== 0);
+	output_array = output_array.filter((movie) => movie.vote_average !== 0);
+	output_array = output_array.filter((movie) => movie.runtime !== "");
+	output_array = output_array.filter(
+		(movie) => movie.overview !== "" || movie.overview !== "None available"
+	);
 
 	return output_array;
 };
 const cleanDatabaseKeywords = (input_array) => {
-	const output_array = [];
+	let output_array = [];
 	input_array.forEach((movie) => {
 		const { id, keywords } = movie;
 		const filteredBook = {
@@ -1348,11 +1367,11 @@ const cleanDatabaseKeywords = (input_array) => {
 
 		output_array.push(filteredBook);
 	});
-
+	output_array = output_array.filter((movie) => movie.keywords.length !== 0);
 	return output_array;
 };
 const cleanDatabaseCredits = (input_array) => {
-	const output_array = [];
+	let output_array = [];
 	input_array.forEach((movie) => {
 		const { id, cast, crew } = movie;
 		const filteredBook = {
@@ -1366,7 +1385,7 @@ const cleanDatabaseCredits = (input_array) => {
 			if (!filteredBook.cast.includes(keyword)) {
 				filteredBook.cast.push(keyword);
 			}
-			if (filteredBook.cast.length == 3) {
+			if (filteredBook.cast.length == 5) {
 				break;
 			}
 		}
@@ -1379,14 +1398,22 @@ const cleanDatabaseCredits = (input_array) => {
 					filteredBook.crew.push(name);
 				}
 			}
-			if (filteredBook.crew.length == 3) {
-				break;
+			if (job == "producer") {
+				if (!filteredBook.crew.includes(name)) {
+					filteredBook.crew.push(name);
+				}
+			}
+			if (job == "writer") {
+				if (!filteredBook.crew.includes(name)) {
+					filteredBook.crew.push(name);
+				}
 			}
 		}
 
 		output_array.push(filteredBook);
 	});
-
+	output_array = output_array.filter((movie) => movie.cast.length !== 0);
+	output_array = output_array.filter((movie) => movie.crew.length !== 0);
 	return output_array;
 };
 module.exports = {

@@ -7,15 +7,15 @@ const fsSync = require("fs");
 const { filterDatabase } = require("./filter");
 const { TF_IDF } = require("./tf-idf");
 
-const get_database = (start, stop) => {
-	const files = fsSync.readdirSync("./json/database/");
+const get_database = (start, stop, path) => {
+	const files = fsSync.readdirSync(path);
 	let database = [];
 	stop = stop > files.length ? files.length : stop;
 
 	for (let i = start; i < stop; i++) {
 		const file = files[i];
 		console.log(i, file);
-		let datapart = require(`./json/database/${file}`).posts;
+		let datapart = require(`${path}${file}`).posts;
 		database = [...database, ...datapart];
 	}
 
@@ -41,6 +41,8 @@ const gen_ref_tags = async (database) => {
 		}
 	}
 	console.log("created ref tags");
+	const json = { list: [...ref_tags] };
+	await fs.writeFile(`./json/database_ref_tags.json`, JSON.stringify(json));
 
 	return ref_tags;
 };
@@ -80,7 +82,23 @@ const is_in_array = (array, target) => {
 	}
 	return found;
 };
-
+const save_multiple_files = (matrix, name) => {
+	let json = { posts: [] };
+	let page = 0;
+	let itemsPerPage = 1000;
+	for (let i = 0; i < matrix.length; i++) {
+		const vector = matrix[i];
+		json.posts.push(vector);
+		if (json.posts.length == itemsPerPage || i == matrix.length - 1) {
+			fsSync.writeFileSync(
+				`./json/${name}/${page}-${itemsPerPage}-tfidf.json`,
+				JSON.stringify(json)
+			);
+			page++;
+			json = { posts: [] };
+		}
+	}
+};
 const get_TF_IDF_Vectors = async (
 	filtered_database,
 	ref_tags,
@@ -89,8 +107,9 @@ const get_TF_IDF_Vectors = async (
 ) => {
 	let database_vectors;
 	try {
-		database_vectors = require(`./json/${filename}.json`);
-		database_vectors = database_vectors.list;
+		database_vectors = get_database(0, Infinity, `./json/${filename}/`);
+		// database_vectors = require(`./json/${filename}.json`);
+		// database_vectors = database_vectors.list;
 		if (
 			database_vectors.length !== filtered_database.length ||
 			database_vectors[0].length !== ref_tags.length
@@ -104,8 +123,8 @@ const get_TF_IDF_Vectors = async (
 			count_books_tag
 		);
 		console.log(`created ${filename} database vectors`);
-		const json = { list: [...database_vectors] };
-		await fs.writeFile(`./json/${filename}.json`, JSON.stringify(json));
+		save_multiple_files(database_vectors, filename);
+		// await fs.writeFile(`./json/${filename}.json`, JSON.stringify(json));
 	}
 
 	return database_vectors;
@@ -225,7 +244,7 @@ const gen_tag_count = (all_books, ref_tags) => {
 		const tag = ref_tags[i];
 		const count = count_docs_with_tag(tag, all_books);
 		count_books_tag.push(count);
-		if (i % 1000 == 0) {
+		if (i % 100 == 0) {
 			console.log(`Counted ${i + 1}/${ref_tags_length}`);
 		}
 	}

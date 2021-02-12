@@ -20,6 +20,7 @@ const merge_movies = (filtered_database, user_movies) => {
 };
 const merge_movies_keywords = (filtered_database, user_movies) => {
 	const filtered_database_length = filtered_database.length;
+
 	for (let i = 0; i < filtered_database_length; i++) {
 		const movie = filtered_database[i];
 		const user_movie = user_movies.find((e) => parseInt(e.id) == movie.id);
@@ -53,19 +54,20 @@ const merge_movies_credits = (filtered_database, user_movies) => {
 		}
 	}
 };
+
 const {
 	cleanDatabase,
 	cleanDatabaseKeywords,
 	cleanDatabaseCredits
 } = require("../filter");
-const { get_database } = require("../util");
 const {
 	filter_recommended,
 	get_recommended,
 	get_TF_IDF_Vectors,
 	gen_ref_tags,
 	get_tag_count,
-	scrapeThumbnails
+	scrapeThumbnails,
+	get_database
 } = require("../recommendation_engine.js");
 
 let filtered_database;
@@ -93,21 +95,7 @@ if (!overwrite) {
 	merge_movies_credits(filtered_database_credits, filtered_database);
 	filtered_database_keywords = [];
 	filtered_database_credits = [];
-	filtered_database = filtered_database.filter(
-		(movie) => movie.keywords.length !== 0
-	);
-	filtered_database = filtered_database.filter(
-		(movie) => movie.cast.length !== 0
-	);
-	filtered_database = filtered_database.filter(
-		(movie) => movie.crew.length !== 0
-	);
-	filtered_database = filtered_database.filter(
-		(movie) => movie.thumbnail_url !== ""
-	);
-	filtered_database = filtered_database.filter(
-		(movie) => movie.adult !== true
-	);
+
 	let json = { posts: [] };
 	let page = 0;
 	let itemsPerPage = 1000;
@@ -151,27 +139,28 @@ const filter_tags = (ref_tags, count_books_tag) => {
 		const count = count_books_tag[i];
 		c.push({ tag, count });
 	}
-	// const low = 1;
-	// c = c.filter((movie) => {
-	// 	return movie.count > low;
-	// });
-	// // count_books_tag = count_books_tag.sort((a, b) => a - b);
-	// count_books_tag = c.map((movie) => movie.count);
-	const median = math.median(count_books_tag);
+	const low = 1;
 	c = c.filter((movie) => {
-		return movie.count > median;
+		return movie.count > low;
 	});
-	count_books_tag = c.map((movie) => movie.count);
+	// count_books_tag = count_books_tag.sort((a, b) => a - b);
+	// count_books_tag = c.map((movie) => movie.count);
+	// const median = math.median(count_books_tag);
+	// c = c.filter((movie) => {
+	// 	return movie.count > median;
+	// });
+	// count_books_tag = c.map((movie) => movie.count);
 	const avg_tag_count = math.mean(count_books_tag);
 	const std_tag_count = math.std(count_books_tag);
 	const max = math.max(count_books_tag);
 	const min = math.min(count_books_tag);
 	const mode = math.mode(count_books_tag);
-	const high = avg_tag_count + 3 * std_tag_count;
+	const high = avg_tag_count + 1.96 * std_tag_count;
 	c = c.filter((movie) => {
 		return movie.count < high;
 	});
-	c = c.sort((a, b) => a.count - b.count);
+	c = c.sort((a, b) => b.count - a.count);
+	// c = c.slice(0, 100);
 	count_books_tag = c.map((movie) => movie.count);
 	ref_tags = c.map((movie) => movie.tag);
 	return [ref_tags, count_books_tag];
@@ -180,74 +169,16 @@ router.get("/personal", async (req, res) => {
 	let user_movies = require("../json/users/ropeiscut-movies.json").movies;
 	user_movies = merge_movies(filtered_database, user_movies);
 
-	let ref_tags = await gen_ref_tags(user_movies);
-
-	// ref_tags = gen_ref_tags(filtered_database);
-	let count_books_tag = await get_tag_count(
-		user_movies,
-		ref_tags,
-		"ropeiscut"
-	);
-
-	[ref_tags, count_books_tag] = filter_tags(ref_tags, count_books_tag);
-	let search_vector_name = "ropeiscut";
-	count_books_tag = await get_tag_count(user_movies, ref_tags, "ropeiscut");
-
-	let user_TF_IDF_Vectors = await get_TF_IDF_Vectors(
-		user_movies,
-		ref_tags,
-		count_books_tag,
-		"ropeiscut_TFIDF"
-	);
-	for (let i = 0; i < user_TF_IDF_Vectors.length; i++) {
-		const vector = user_TF_IDF_Vectors[i];
-		const [maxIndex, maxValue] = indexOfMax(vector);
-		user_movies[i].maxTag = ref_tags[maxIndex];
-		user_movies[i].maxTagValue = maxValue;
-	}
-	const movies_w_rating = user_movies.filter(
-		(movie) => !isNaN(movie.user_rating)
-	);
-	const movies_ratings = movies_w_rating.map((movie) => movie.user_rating);
-	const avg_user_rating =
-		movies_ratings.reduce((total, next) => total + next, 0) /
-		movies_ratings.length;
-
-	user_movies.forEach((movie) => {
-		if (isNaN(movie.user_rating)) {
-			movie.user_rating = avg_user_rating;
-		}
-	});
-
-	for (let i = 0; i < user_TF_IDF_Vectors.length; i++) {
-		const vector = user_TF_IDF_Vectors[i];
-		const rating = user_movies[i].user_rating;
-		user_TF_IDF_Vectors[i] = math.multiply(vector, rating);
-	}
-	search_vector = math.multiply(
-		math.apply(user_TF_IDF_Vectors, 0, math.sum),
-		1 / user_TF_IDF_Vectors.length
-	);
 	let ignore_list = [];
 	let search = req.query.tag;
 	let search_list = [];
 	search ? (search_list = [search]) : (search_list = []);
 	const filterlist = {
-		num_pages: -1,
-		num_favorites: -1,
 		tags: search_list
 	};
 
-	// recommended_list = recommended_list.filter((item) => {return });
-	let recommended_list = await get_recommended(
-		search_vector,
-		user_TF_IDF_Vectors,
-		user_movies,
-		search_vector_name
-	);
-
 	const filtered_recommended_list = filter_recommended(
-		recommended_list,
+		user_movies,
 		ignore_list,
 		filterlist,
 		user_movies.length
