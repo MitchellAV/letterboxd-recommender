@@ -140,10 +140,14 @@ const scrapeTMDBCredits = async (
 			id++;
 		}
 		console.log(`Page: ${page} - ${json.posts.length}`);
-		fs.writeFileSync(
-			`./json/credits/${page}-${itemsPerPage}-tmdb.json`,
-			JSON.stringify(json)
-		);
+		if (json.posts.length !== 0) {
+			fs.writeFileSync(
+				`./json/credits/${page}-${itemsPerPage}-tmdb.json`,
+				JSON.stringify(json)
+			);
+		} else {
+			isFinished == true;
+		}
 
 		if (numErrors == itemsPerPage || id > end_id) {
 			isFinished = true;
@@ -227,10 +231,14 @@ const scrapeTMDBKeywords = async (
 			id++;
 		}
 		console.log(`Page: ${page} - ${json.posts.length}`);
-		fs.writeFileSync(
-			`./json/keywords/${page}-${itemsPerPage}-tmdb.json`,
-			JSON.stringify(json)
-		);
+		if (json.posts.length !== 0) {
+			fs.writeFileSync(
+				`./json/keywords/${page}-${itemsPerPage}-tmdb.json`,
+				JSON.stringify(json)
+			);
+		} else {
+			isFinished == true;
+		}
 
 		if (numErrors == itemsPerPage || id > end_id) {
 			isFinished = true;

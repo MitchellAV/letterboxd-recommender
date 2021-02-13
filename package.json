@@ -6,7 +6,9 @@
 	"scripts": {
 		"users": "node getletterboxd.js",
 		"start": "node --max-old-space-size=8192 server.js",
-		"dev": "nodemon server.js"
+		"movies": "node --max-old-space-size=8192 getmovies.js",
+		"dev": "nodemon server.js",
+		"mongodb": "mongod --port 27017 --dbpath=D:/Desktop/Letterboxd-movie-recommender/movies-db"
 	},
 	"author": "",
 	"license": "ISC",
@@ -19,6 +21,7 @@
 		"express": "^4.17.1",
 		"fs": "0.0.1-security",
 		"mathjs": "^8.1.1",
+		"mongoose": "^5.11.16",
 		"puppeteer": "^5.5.0",
 		"puppeteer-extra": "^3.1.15",
 		"puppeteer-extra-plugin-recaptcha": "^3.3.0",

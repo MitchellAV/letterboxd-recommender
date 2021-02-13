@@ -1274,6 +1274,9 @@ const cleanDatabase = (input_array) => {
 			genres: [],
 			cast: [],
 			crew: [],
+			directors: [],
+			producers: [],
+			writers: [],
 			budget,
 			adult,
 			thumbnail_url: poster_path
@@ -1341,12 +1344,14 @@ const cleanDatabase = (input_array) => {
 	output_array = output_array.filter((movie) => movie.genres.lentgh !== 0);
 	output_array = output_array.filter((movie) => movie.release_date !== "");
 	output_array = output_array.filter((movie) => movie.thumbnail_url !== "");
-	output_array = output_array.filter((movie) => movie.adult !== true);
+	output_array = output_array.filter((movie) => movie.adult !== false);
 	output_array = output_array.filter((movie) => movie.vote_count !== 0);
 	output_array = output_array.filter((movie) => movie.vote_average !== 0);
 	output_array = output_array.filter((movie) => movie.runtime !== "");
 	output_array = output_array.filter(
-		(movie) => movie.overview !== "" || movie.overview !== "None available"
+		(movie) =>
+			movie.overview !== "" &&
+			movie.overview.toLowerCase().trim() !== "none available"
 	);
 
 	return output_array;
@@ -1377,7 +1382,12 @@ const cleanDatabaseCredits = (input_array) => {
 		const filteredBook = {
 			id,
 			cast: [],
-			crew: []
+			crew: [],
+			directors: [],
+			producers: [],
+			writers: [],
+			dp: [],
+			screenplay: []
 		};
 
 		for (let i = 0; i < cast.length; i++) {
@@ -1394,16 +1404,35 @@ const cleanDatabaseCredits = (input_array) => {
 			const job = crew[i].job.toLowerCase();
 			const name = crew_member.name.toLowerCase();
 			if (job == "director") {
+				filteredBook.directors.push(name);
 				if (!filteredBook.crew.includes(name)) {
 					filteredBook.crew.push(name);
 				}
 			}
 			if (job == "producer") {
+				filteredBook.producers.push(name);
+
 				if (!filteredBook.crew.includes(name)) {
 					filteredBook.crew.push(name);
 				}
 			}
 			if (job == "writer") {
+				filteredBook.writers.push(name);
+
+				if (!filteredBook.crew.includes(name)) {
+					filteredBook.crew.push(name);
+				}
+			}
+			if (job == "director of photography") {
+				filteredBook.dp.push(name);
+
+				if (!filteredBook.crew.includes(name)) {
+					filteredBook.crew.push(name);
+				}
+			}
+			if (job == "screenplay") {
+				filteredBook.screenplay.push(name);
+
 				if (!filteredBook.crew.includes(name)) {
 					filteredBook.crew.push(name);
 				}

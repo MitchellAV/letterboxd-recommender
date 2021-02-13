@@ -3,6 +3,9 @@ const fs = require("fs");
 
 const router = express.Router();
 const math = require("mathjs");
+const mongoose = require("mongoose");
+const Movie = require("../models/movie");
+
 const merge_movies = (filtered_database, user_movies) => {
 	const movies = [];
 	for (let i = 0; i < filtered_database.length; i++) {
@@ -71,49 +74,61 @@ const {
 } = require("../recommendation_engine.js");
 
 let filtered_database;
-let overwrite = false;
+let overwrite = true;
 if (!overwrite) {
 	filtered_database = [...get_database(0, Infinity, "./json/filtered/")];
+	const first = { ...filtered_database[0] };
+	const movie = new Movie(first);
+	movie
+		.save()
+		.then((result) => console.log("saved movie"))
+		.catch((err) => console.error(err));
 } else {
-	filtered_database = [...get_database(0, Infinity, "./json/database/")];
-	let filtered_database_keywords = [
-		...get_database(0, Infinity, "./json/keywords/")
-	];
-	let filtered_database_credits = [
-		...get_database(0, Infinity, "./json/credits/")
-	];
-
-	filtered_database = cleanDatabase(filtered_database);
-	console.log("created filtered database");
-	filtered_database_keywords = cleanDatabaseKeywords(
-		filtered_database_keywords
-	);
-	console.log("created filtered database");
-	filtered_database_credits = cleanDatabaseCredits(filtered_database_credits);
-	console.log("created filtered database");
-	merge_movies_keywords(filtered_database_keywords, filtered_database);
-	merge_movies_credits(filtered_database_credits, filtered_database);
-	filtered_database_keywords = [];
-	filtered_database_credits = [];
-
-	let json = { posts: [] };
-	let page = 0;
-	let itemsPerPage = 1000;
-	for (let i = 0; i < filtered_database.length; i++) {
-		const movie = filtered_database[i];
-		json.posts.push(movie);
-		if (
-			json.posts.length == itemsPerPage ||
-			i == filtered_database.length - 1
-		) {
-			fs.writeFileSync(
-				`./json/filtered/${page}-${itemsPerPage}-tmdb.json`,
-				JSON.stringify(json)
-			);
-			page++;
-			json = { posts: [] };
-		}
-	}
+	// filtered_database = [...get_database(0, Infinity, "./json/database/")];
+	// let filtered_database_keywords = [
+	// 	...get_database(0, Infinity, "./json/keywords/")
+	// ];
+	// let filtered_database_credits = [
+	// 	...get_database(0, Infinity, "./json/credits/")
+	// ];
+	// filtered_database = cleanDatabase(filtered_database);
+	// console.log("created filtered database");
+	// filtered_database.forEach((movie) => {
+	// 	const movieBSON = new Movie({ ...movie, _id: movie.id });
+	// 	console.log(`${movie.id}`);
+	// 	movieBSON
+	// 		.save()
+	// 		.then((result) => console.log(`${movie.id} added to Database`))
+	// 		.catch((err) => console.error(err));
+	// });
+	// filtered_database_keywords = cleanDatabaseKeywords(
+	// 	filtered_database_keywords
+	// );
+	// console.log("created filtered database");
+	// filtered_database_credits = cleanDatabaseCredits(filtered_database_credits);
+	// console.log("created filtered database");
+	// merge_movies_keywords(filtered_database_keywords, filtered_database);
+	// merge_movies_credits(filtered_database_credits, filtered_database);
+	// filtered_database_keywords = [];
+	// filtered_database_credits = [];
+	// let json = { posts: [] };
+	// let page = 0;
+	// let itemsPerPage = 1000;
+	// for (let i = 0; i < filtered_database.length; i++) {
+	// 	const movie = filtered_database[i];
+	// 	json.posts.push(movie);
+	// 	if (
+	// 		json.posts.length == itemsPerPage ||
+	// 		i == filtered_database.length - 1
+	// 	) {
+	// 		fs.writeFileSync(
+	// 			`./json/filtered/${page}-${itemsPerPage}-tmdb.json`,
+	// 			JSON.stringify(json)
+	// 		);
+	// 		page++;
+	// 		json = { posts: [] };
+	// 	}
+	// }
 }
 function indexOfMax(arr) {
 	if (arr.length === 0) {
@@ -139,7 +154,7 @@ const filter_tags = (ref_tags, count_books_tag) => {
 		const count = count_books_tag[i];
 		c.push({ tag, count });
 	}
-	const low = 1;
+	const low = 200;
 	c = c.filter((movie) => {
 		return movie.count > low;
 	});
@@ -205,7 +220,7 @@ router.get("/", async (req, res) => {
 		ref_tags,
 		"database"
 	);
-
+	// filter using tfidf score somehow
 	[ref_tags, count_books_tag] = filter_tags(ref_tags, count_books_tag);
 
 	let database_TF_IDF_Vectors = await get_TF_IDF_Vectors(
@@ -263,7 +278,7 @@ router.get("/", async (req, res) => {
 
 		user_movies.forEach((movie) => {
 			if (isNaN(movie.user_rating)) {
-				movie.user_rating = avg_user_rating;
+				movie.user_rating = 1;
 			}
 		});
 
