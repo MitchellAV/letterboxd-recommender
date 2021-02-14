@@ -1256,14 +1256,15 @@ const cleanDatabase = (input_array) => {
 			adult
 		} = movie;
 		const filteredBook = {
-			id,
+			_id: id,
 			title,
 			vote_count,
-			vote_average,
+			vote_average: vote_average.toFixed(1),
 			release_date,
 			production_countries: [],
 			production_companies: [],
 			spoken_languages: [],
+			overview_words: [],
 			runtime,
 			revenue,
 			overview,
@@ -1288,69 +1289,85 @@ const cleanDatabase = (input_array) => {
 			tags: [],
 			score: 0
 		};
-		let overview_words = overview
-			.replace(/['!"#$%&\\’()\*+,\-\.\/:;<=>?@\[\\\]\^_–`{|}~']/g, "")
-			.replace(/\s{2,}/g, " ")
-			.replace("'s ", " ")
+		let words = overview
 			.toLowerCase()
-			.split(" ");
-		overview_words = overview_words.filter(
-			(tag) => !common_tags.includes(tag)
-		);
-		overview_words = [...new Set(overview_words)];
+			.replace(/’s /g, " ")
+			.replace(/'s /g, " ")
+			.replace(/s’ /g, "s ")
+			.replace(/s' /g, "s ")
+			.replace(/ \-{1,} /g, "")
+			.replace(/ '/g, " ")
+			.replace(/ ’/g, " ")
+			.replace(/^'/g, "")
+			.replace(/^’/g, "")
+			.replace(/' /g, " ")
+			.replace(/’ /g, " ")
+			.replace(/[!"#$%&\\()\*+,\.\/:;<=>?@\[\\\]\^_–—`{|}~]/g, "")
+			.replace(/\s{2,}/g, " ")
+			.split(" ")
+			.filter((word) => word !== "");
 
-		filteredBook.tags = [...overview_words];
+		words = words.filter((tag) => !common_tags.includes(tag));
+		filteredBook.overview_words = [...words];
+
+		// filteredBook.tags = [...overview_words];
 		for (let i = 0; i < genres.length; i++) {
 			const genre = genres[i].name.toLowerCase();
 			filteredBook.genres.push(genre);
-			if (!filteredBook.tags.includes(genre)) {
-				filteredBook.tags.push(genre);
-			}
+			// if (!filteredBook.tags.includes(genre)) {
+			// 	filteredBook.tags.push(genre);
+			// }
 		}
 		for (let i = 0; i < spoken_languages.length; i++) {
 			const lang = spoken_languages[i].english_name.toLowerCase();
 
 			filteredBook.spoken_languages.push(lang);
-			if (!filteredBook.tags.includes(lang)) {
-				filteredBook.tags.push(lang);
-			}
+			// if (!filteredBook.tags.includes(lang)) {
+			// 	filteredBook.tags.push(lang);
+			// }
 		}
 		for (let i = 0; i < production_countries.length; i++) {
 			const country = production_countries[i].name.toLowerCase();
 			filteredBook.production_countries.push(country);
-			if (!filteredBook.tags.includes(country)) {
-				filteredBook.tags.push(country);
-			}
+			// if (!filteredBook.tags.includes(country)) {
+			// 	filteredBook.tags.push(country);
+			// }
 		}
 		for (let i = 0; i < production_companies.length; i++) {
 			const company = production_companies[i].name.toLowerCase();
 			filteredBook.production_companies.push(company);
-			if (!filteredBook.tags.includes(company)) {
-				filteredBook.tags.push(company);
-			}
+			// if (!filteredBook.tags.includes(company)) {
+			// 	filteredBook.tags.push(company);
+			// }
 		}
+
 		output_array.push(filteredBook);
 	});
 	output_array = output_array.filter((movie) => movie.imdb_id !== "");
+	// output_array = output_array.filter(
+	// 	(movie) => movie.production_companies.lentgh !== 0
+	// );
+	// output_array = output_array.filter(
+	// 	(movie) => movie.spoken_languages.lentgh !== 0
+	// );
+	// output_array = output_array.filter(
+	// 	(movie) => movie.production_countries.lentgh !== 0
+	// );
 	output_array = output_array.filter(
-		(movie) => movie.production_companies.lentgh !== 0
-	);
-	output_array = output_array.filter(
-		(movie) => movie.spoken_languages.lentgh !== 0
-	);
-	output_array = output_array.filter(
-		(movie) => movie.production_countries.lentgh !== 0
+		(movie) => movie.overview_words.lentgh !== 0
 	);
 	output_array = output_array.filter((movie) => movie.genres.lentgh !== 0);
-	output_array = output_array.filter((movie) => movie.release_date !== "");
-	output_array = output_array.filter((movie) => movie.thumbnail_url !== "");
-	output_array = output_array.filter((movie) => movie.adult !== false);
+	output_array = output_array.filter((movie) => movie.release_date !== null);
+	output_array = output_array.filter((movie) => movie.thumbnail_url !== null);
+	// output_array = output_array.filter((movie) => movie.adult !== false);
 	output_array = output_array.filter((movie) => movie.vote_count !== 0);
 	output_array = output_array.filter((movie) => movie.vote_average !== 0);
-	output_array = output_array.filter((movie) => movie.runtime !== "");
+	output_array = output_array.filter(
+		(movie) => movie.runtime !== 0 && movie.runtime !== null
+	);
 	output_array = output_array.filter(
 		(movie) =>
-			movie.overview !== "" &&
+			movie.overview !== null &&
 			movie.overview.toLowerCase().trim() !== "none available"
 	);
 
@@ -1361,7 +1378,7 @@ const cleanDatabaseKeywords = (input_array) => {
 	input_array.forEach((movie) => {
 		const { id, keywords } = movie;
 		const filteredBook = {
-			id,
+			_id: id,
 			keywords: []
 		};
 
@@ -1380,7 +1397,7 @@ const cleanDatabaseCredits = (input_array) => {
 	input_array.forEach((movie) => {
 		const { id, cast, crew } = movie;
 		const filteredBook = {
-			id,
+			_id: id,
 			cast: [],
 			crew: [],
 			directors: [],
@@ -1441,8 +1458,8 @@ const cleanDatabaseCredits = (input_array) => {
 
 		output_array.push(filteredBook);
 	});
-	output_array = output_array.filter((movie) => movie.cast.length !== 0);
-	output_array = output_array.filter((movie) => movie.crew.length !== 0);
+	// output_array = output_array.filter((movie) => movie.cast.length !== 0);
+	// output_array = output_array.filter((movie) => movie.crew.length !== 0);
 	return output_array;
 };
 module.exports = {

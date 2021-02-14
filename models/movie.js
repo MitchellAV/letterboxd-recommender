@@ -1,17 +1,26 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+const hasOverview = (str) => {
+	return str !== "" && str.toLowerCase() !== "none available";
+};
 const movieSchema = new Schema(
 	{
 		_id: Number,
 		title: { type: String, required: true },
-		overview: { type: String },
+		overview: {
+			type: String,
+			required: true,
+			validate: {
+				validator: hasOverview
+			}
+		},
 		keywords: [String],
 		tags: [String],
-		thumbnail_url: String,
+		thumbnail_url: { type: String, required: true },
 		score: Number,
-		adult: Boolean,
-		genres: [String],
+		adult: { type: Boolean, required: true },
+		genres: [{ type: String, required: true }],
 		cast: [String],
 		crew: [String],
 		directors: [String],
@@ -19,16 +28,17 @@ const movieSchema = new Schema(
 		writers: [String],
 		dp: [String],
 		screenplay: [String],
-		original_title: String,
-		original_language: String,
-		imdb_id: String,
-		vote_count: Number,
-		vote_average: Number,
-		release_date: String,
+		overview_words: [{ type: String, required: true }],
+		original_title: { type: String, required: true },
+		original_language: { type: String, required: true },
+		imdb_id: { type: String, required: true },
+		vote_count: { type: Number, required: true, min: 1 },
+		vote_average: { type: Number, required: true, min: 0.5 },
+		release_date: { type: String, required: true },
 		production_countries: [String],
 		production_companies: [String],
 		spoken_languages: [String],
-		runtime: Number,
+		runtime: { type: Number, required: true, min: 1 },
 		revenue: Number,
 		budget: Number
 	},

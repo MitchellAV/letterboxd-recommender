@@ -23,18 +23,19 @@ const scrapeTMDB = async (start_id, end_id, page, database) => {
 		let numErrors = 0;
 		let consec_errors = 0;
 		while (id < startId + itemsPerPage && id <= end_id && !isFinished) {
-			let found = false;
+			let skip = false;
 			for (let i = 0; i < database_ids.length; i++) {
 				let database_id = parseInt(database_ids[i]);
 				if (database_id == parseInt(id)) {
-					found = true;
+					skip = true;
 					break;
 				}
 			}
-			if (found) {
+			if (skip) {
 				id++;
 				continue;
 			}
+
 			try {
 				book = await axios.get(
 					`https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.TMDB_API_KEY}`
@@ -53,10 +54,14 @@ const scrapeTMDB = async (start_id, end_id, page, database) => {
 			id++;
 		}
 		console.log(`Page: ${page} - ${json.posts.length}`);
-		fs.writeFileSync(
-			`./json/database/${page}-${itemsPerPage}-tmdb.json`,
-			JSON.stringify(json)
-		);
+		if (json.posts.length !== 0) {
+			fs.writeFileSync(
+				`./json/database/${page}-${itemsPerPage}-tmdb.json`,
+				JSON.stringify(json)
+			);
+		} else {
+			isFinished = true;
+		}
 
 		if (numErrors == itemsPerPage || id > end_id) {
 			isFinished = true;
@@ -146,7 +151,7 @@ const scrapeTMDBCredits = async (
 				JSON.stringify(json)
 			);
 		} else {
-			isFinished == true;
+			isFinished = true;
 		}
 
 		if (numErrors == itemsPerPage || id > end_id) {
@@ -237,7 +242,7 @@ const scrapeTMDBKeywords = async (
 				JSON.stringify(json)
 			);
 		} else {
-			isFinished == true;
+			isFinished = true;
 		}
 
 		if (numErrors == itemsPerPage || id > end_id) {

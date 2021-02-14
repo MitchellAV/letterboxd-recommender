@@ -22,17 +22,23 @@ mongoose
 		console.log("Sucessfully connected to database movies-db");
 		app.listen(3000, console.log("Server started on localhost:3000"));
 
-		// let filtered_database = [
-		// 	...get_database(0, Infinity, "./json/database/")
-		// ];
-		// let filtered_database = await Movie.find({});
-		// let filtered_database_keywords = [
-		// 	...get_database(0, Infinity, "./json/keywords/")
-		// ];
 		let filtered_database = [
+			...get_database(0, Infinity, "./json/database/")
+		];
+		// let filtered_database = await Movie.find({});
+		let filtered_database_keywords = [
+			...get_database(0, Infinity, "./json/keywords/")
+		];
+		let filtered_database_credits = [
 			...get_database(0, Infinity, "./json/credits/")
 		];
-		filtered_database = cleanDatabaseCredits(filtered_database);
+		filtered_database = cleanDatabase(filtered_database);
+		filtered_database_keywords = cleanDatabaseKeywords(
+			filtered_database_keywords
+		);
+		filtered_database_credits = cleanDatabaseCredits(
+			filtered_database_credits
+		);
 		// console.log("created filtered database");
 		// await Movie.deleteMany({ keywords: { $size: 0 } });
 		// console.log("Deleted movies");
@@ -53,24 +59,49 @@ mongoose
 			// {
 			// 	tags: {'$setUnion':['$keywords','$genres'] }
 			//   }
-			try {
-				await Movie.findOneAndUpdate(
-					{
-						_id: movie.id
-					},
-					{
-						cast: movie.cast,
-						crew: movie.crew,
-						directors: movie.directors,
-						producers: movie.producers,
-						writers: movie.writers,
-						dp: movie.dp,
-						screenplay: movie.screenplay
-					}
-				);
-				console.log(`${movie.id} added to Database`);
-			} catch (err) {
-				console.log(err);
+			const data = await Movie.findById(movie._id);
+			if (!data) {
+				try {
+					const movieBSON = new Movie(movie);
+					await movieBSON.save();
+					console.log(`${movie._id} added to Database`);
+				} catch (err) {
+					console.log(err);
+				}
+			}
+		}
+		for (let i = 0; i < filtered_database_keywords.length; i++) {
+			const movie = filtered_database_keywords[i];
+			// {
+			// 	tags: {'$setUnion':['$keywords','$genres'] }
+			//   }
+			const { id, ...rest } = movie;
+			const data = await Movie.findById(movie._id);
+
+			if (data) {
+				try {
+					await Movie.findByIdAndUpdate(movie._id, rest);
+					console.log(`${movie._id} updated movie keyword`);
+				} catch (err) {
+					console.log(err);
+				}
+			}
+		}
+		for (let i = 0; i < filtered_database_credits.length; i++) {
+			const movie = filtered_database_credits[i];
+			// {
+			// 	tags: {'$setUnion':['$keywords','$genres'] }
+			//   }
+
+			const { id, ...rest } = movie;
+			const data = await Movie.findById(movie._id);
+			if (data) {
+				try {
+					await Movie.findByIdAndUpdate(movie._id, rest);
+					console.log(`${movie._id} updated movie keyword`);
+				} catch (err) {
+					console.log(err);
+				}
 			}
 		}
 	})

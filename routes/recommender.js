@@ -94,11 +94,11 @@ if (!overwrite) {
 	// filtered_database = cleanDatabase(filtered_database);
 	// console.log("created filtered database");
 	// filtered_database.forEach((movie) => {
-	// 	const movieBSON = new Movie({ ...movie, _id: movie.id });
-	// 	console.log(`${movie.id}`);
-	// 	movieBSON
-	// 		.save()
-	// 		.then((result) => console.log(`${movie.id} added to Database`))
+	// const movieBSON = new Movie({ ...movie, _id: movie.id });
+	// console.log(`${movie.id}`);
+	// movieBSON
+	// 	.save()
+	// 	.then((result) => console.log(`${movie.id} added to Database`));
 	// 		.catch((err) => console.error(err));
 	// });
 	// filtered_database_keywords = cleanDatabaseKeywords(
