@@ -1,3 +1,5 @@
+const { TF } = require("./mongotf-idf");
+
 const assign_popularity = (num_favorites) => {
 	let tag = "";
 	if (num_favorites <= 2000) {
@@ -1308,7 +1310,7 @@ const cleanDatabase = (input_array) => {
 			.filter((word) => word !== "");
 
 		words = words.filter((tag) => !common_tags.includes(tag));
-		filteredBook.overview_words = [...words];
+		filteredBook.overview_words = words;
 
 		// filteredBook.tags = [...overview_words];
 		for (let i = 0; i < genres.length; i++) {
@@ -1354,21 +1356,34 @@ const cleanDatabase = (input_array) => {
 	// 	(movie) => movie.production_countries.lentgh !== 0
 	// );
 	output_array = output_array.filter(
-		(movie) => movie.overview_words.lentgh !== 0
+		(movie) => movie.overview_words.length !== 0
 	);
-	output_array = output_array.filter((movie) => movie.genres.lentgh !== 0);
-	output_array = output_array.filter((movie) => movie.release_date !== null);
-	output_array = output_array.filter((movie) => movie.thumbnail_url !== null);
+	output_array = output_array.filter((movie) => movie.genres.length !== 0);
+	output_array = output_array.filter(
+		(movie) => movie.release_date !== "" && movie.release_date !== null
+	);
+	output_array = output_array.filter(
+		(movie) => movie.thumbnail_url !== "" && movie.thumbnail_url !== null
+	);
 	// output_array = output_array.filter((movie) => movie.adult !== false);
-	output_array = output_array.filter((movie) => movie.vote_count !== 0);
-	output_array = output_array.filter((movie) => movie.vote_average !== 0);
+	output_array = output_array.filter(
+		(movie) => movie.vote_count !== 0 && movie.vote_count !== null
+	);
+	output_array = output_array.filter(
+		(movie) => movie.vote_average !== 0 && movie.vote_average !== null
+	);
 	output_array = output_array.filter(
 		(movie) => movie.runtime !== 0 && movie.runtime !== null
 	);
 	output_array = output_array.filter(
+		(movie) => movie.imdb_id !== "" && movie.imdb_id !== null
+	);
+	output_array = output_array.filter(
 		(movie) =>
-			movie.overview !== null &&
-			movie.overview.toLowerCase().trim() !== "none available"
+			movie.overview !== "" &&
+			movie.overview !== " " &&
+			movie.overview.toLowerCase().trim() !== "none available" &&
+			movie.overview.toLowerCase().trim() !== "there is no information"
 	);
 
 	return output_array;

@@ -3,8 +3,9 @@ const fs = require("fs");
 
 const router = express.Router();
 const math = require("mathjs");
-const mongoose = require("mongoose");
 const Movie = require("../models/movie");
+const Tag = require("../models/tag");
+const User = require("../models/user");
 
 const merge_movies = (filtered_database, user_movies) => {
 	const movies = [];
@@ -70,19 +71,19 @@ const {
 	gen_ref_tags,
 	get_tag_count,
 	scrapeThumbnails,
-	get_database
+	get_database,
+	cosine_similarity
 } = require("../recommendation_engine.js");
 
-let filtered_database;
 let overwrite = true;
 if (!overwrite) {
-	filtered_database = [...get_database(0, Infinity, "./json/filtered/")];
-	const first = { ...filtered_database[0] };
-	const movie = new Movie(first);
-	movie
-		.save()
-		.then((result) => console.log("saved movie"))
-		.catch((err) => console.error(err));
+	// filtered_database = [...get_database(0, Infinity, "./json/filtered/")];
+	// const first = { ...filtered_database[0] };
+	// const movie = new Movie(first);
+	// movie
+	// 	.save()
+	// 	.then((result) => console.log("saved movie"))
+	// 	.catch((err) => console.error(err));
 } else {
 	// filtered_database = [...get_database(0, Infinity, "./json/database/")];
 	// let filtered_database_keywords = [
@@ -208,107 +209,197 @@ router.get("/personal", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
-	let id = parseInt(req.query.id);
-	let user_movies = require("../json/users/ropeiscut-movies.json").movies;
-	user_movies = merge_movies(filtered_database, user_movies);
+	// let filtered_database = await Movie.find({});
 
-	let ref_tags = await gen_ref_tags(user_movies);
+	// let id = parseInt(req.query.id);
+	// let user_movies = require("../json/users/ropeiscut-movies.json").movies;
+	// user_movies = merge_movies(filtered_database, user_movies);
 
-	// ref_tags = gen_ref_tags(filtered_database);
-	let count_books_tag = await get_tag_count(
-		filtered_database,
-		ref_tags,
-		"database"
-	);
-	// filter using tfidf score somehow
-	[ref_tags, count_books_tag] = filter_tags(ref_tags, count_books_tag);
+	// let ref_tags = await gen_ref_tags(user_movies);
 
-	let database_TF_IDF_Vectors = await get_TF_IDF_Vectors(
-		filtered_database,
-		ref_tags,
-		count_books_tag,
-		"database_TFIDF"
-	);
+	// // ref_tags = gen_ref_tags(filtered_database);
+	// let count_books_tag = await get_tag_count(
+	// 	filtered_database,
+	// 	ref_tags,
+	// 	"database"
+	// );
+	// // filter using tfidf score somehow
+	// [ref_tags, count_books_tag] = filter_tags(ref_tags, count_books_tag);
 
-	// apply movie rating to each movie vector
-	for (let i = 0; i < database_TF_IDF_Vectors.length; i++) {
-		const vector = database_TF_IDF_Vectors[i];
-		let rating = filtered_database[i].vote_average;
-		database_TF_IDF_Vectors[i] = math.multiply(vector, rating);
-		const [maxIndex, maxValue] = indexOfMax(vector);
-		filtered_database[i].maxTag = ref_tags[maxIndex];
-		let a = [];
-		// for (let j = 0; j < filtered_database[i].tags.length; j++) {
-		// 	const tag = filtered_database[i].tags[j];
-		// 	const tagIndex = ref_tags.indexOf(tag);
-		// 	const tagScore = vector[tagIndex];
-		// 	a.push({ tag, tagScore });
-		// }
-		// console.log("");
-	}
+	// let database_TF_IDF_Vectors = await get_TF_IDF_Vectors(
+	// 	filtered_database,
+	// 	ref_tags,
+	// 	count_books_tag,
+	// 	"database_TFIDF"
+	// );
 
-	let search_vector;
-	let search_vector_name;
-	if (id) {
-		search_vector_name = "id";
-		for (let i = 0; i < filtered_database.length; i++) {
-			const book = filtered_database[i];
-			if (book.id == id) {
-				search_vector = database_TF_IDF_Vectors[i];
-				break;
+	// // apply movie rating to each movie vector
+	// for (let i = 0; i < database_TF_IDF_Vectors.length; i++) {
+	// 	const vector = database_TF_IDF_Vectors[i];
+	// 	let rating = filtered_database[i].vote_average;
+	// 	database_TF_IDF_Vectors[i] = math.multiply(vector, rating);
+	// 	const [maxIndex, maxValue] = indexOfMax(vector);
+	// 	filtered_database[i].maxTag = ref_tags[maxIndex];
+	// 	let a = [];
+	// 	// for (let j = 0; j < filtered_database[i].tags.length; j++) {
+	// 	// 	const tag = filtered_database[i].tags[j];
+	// 	// 	const tagIndex = ref_tags.indexOf(tag);
+	// 	// 	const tagScore = vector[tagIndex];
+	// 	// 	a.push({ tag, tagScore });
+	// 	// }
+	// 	// console.log("");
+	// }
+
+	// let search_vector;
+	// let search_vector_name;
+	// if (id) {
+	// 	search_vector_name = "id";
+	// 	for (let i = 0; i < filtered_database.length; i++) {
+	// 		const book = filtered_database[i];
+	// 		if (book.id == id) {
+	// 			search_vector = database_TF_IDF_Vectors[i];
+	// 			break;
+	// 		}
+	// 	}
+	// } else {
+	// 	search_vector_name = "user";
+	// 	count_books_tag = await get_tag_count(user_movies, ref_tags, "user");
+
+	// 	let user_TF_IDF_Vectors = await get_TF_IDF_Vectors(
+	// 		user_movies,
+	// 		ref_tags,
+	// 		count_books_tag,
+	// 		"user_TFIDF"
+	// 	);
+	// 	const movies_w_rating = user_movies.filter(
+	// 		(movie) => !isNaN(movie.user_rating)
+	// 	);
+	// 	const movies_ratings = movies_w_rating.map(
+	// 		(movie) => movie.user_rating
+	// 	);
+	// 	const avg_user_rating = math.mean(movies_ratings);
+
+	// 	user_movies.forEach((movie) => {
+	// 		if (isNaN(movie.user_rating)) {
+	// 			movie.user_rating = 1;
+	// 		}
+	// 	});
+
+	// 	for (let i = 0; i < user_TF_IDF_Vectors.length; i++) {
+	// 		const vector = user_TF_IDF_Vectors[i];
+	// 		const rating = user_movies[i].user_rating;
+	// 		user_TF_IDF_Vectors[i] = math.multiply(vector, rating);
+	// 	}
+
+	// 	search_vector = math.multiply(
+	// 		math.apply(user_TF_IDF_Vectors, 0, math.sum),
+	// 		1 / user_TF_IDF_Vectors.length
+	// 	);
+	// 	let v = [];
+	// 	for (let i = 0; i < search_vector.length; i++) {
+	// 		const el = search_vector[i];
+	// 		v.push({ tag: ref_tags[i], score: el });
+	// 	}
+	// 	v = v.sort((a, b) => a.score - b.score);
+	// 	// print("");
+	// }
+
+	// let recommended_list = await get_recommended(
+	// 	search_vector,
+	// 	database_TF_IDF_Vectors,
+	// 	filtered_database,
+	// 	search_vector_name
+	// );
+	let usermovies = await User.findById("ropeiscut");
+
+	usermovies = usermovies.movies.map((el) => {
+		return el._id;
+	});
+	let recommended_list = await User.aggregate([
+		{
+			$project: {
+				recommended: 1
+			}
+		},
+		{
+			$unwind: {
+				path: "$recommended"
+			}
+		},
+		{
+			$sort: {
+				"recommended.score": -1
+			}
+		},
+		{
+			$set: {
+				score: "$recommended.score"
+			}
+		},
+		{
+			$lookup: {
+				from: "movies",
+				let: {
+					movie_id: "$recommended._id"
+				},
+				pipeline: [
+					{
+						$match: {
+							$expr: {
+								$and: [
+									{
+										$eq: ["$$movie_id", "$_id"]
+									},
+									// {
+									// 	$gte: ["$vote_count", 1000]
+									// },
+									{
+										$gte: ["$runtime", 30]
+									},
+									// {
+									// 	$gte: ["$vote_average", 5]
+									// },
+									{ $not: [{ $in: ["$_id", usermovies] }] }
+								]
+							}
+						}
+					}
+				],
+				as: "recommended"
+			}
+		},
+		{
+			$set: {
+				recommended: {
+					$arrayElemAt: ["$recommended", 0]
+				}
+			}
+		},
+		{
+			$set: {
+				"recommended.score": "$score"
+			}
+		},
+		{
+			$limit: 1000
+		},
+		{
+			$group: {
+				_id: "_id",
+				recommended: {
+					$push: "$recommended"
+				}
 			}
 		}
-	} else {
-		search_vector_name = "user";
-		count_books_tag = await get_tag_count(user_movies, ref_tags, "user");
-
-		let user_TF_IDF_Vectors = await get_TF_IDF_Vectors(
-			user_movies,
-			ref_tags,
-			count_books_tag,
-			"user_TFIDF"
-		);
-		const movies_w_rating = user_movies.filter(
-			(movie) => !isNaN(movie.user_rating)
-		);
-		const movies_ratings = movies_w_rating.map(
-			(movie) => movie.user_rating
-		);
-		const avg_user_rating = math.mean(movies_ratings);
-
-		user_movies.forEach((movie) => {
-			if (isNaN(movie.user_rating)) {
-				movie.user_rating = 1;
-			}
-		});
-
-		for (let i = 0; i < user_TF_IDF_Vectors.length; i++) {
-			const vector = user_TF_IDF_Vectors[i];
-			const rating = user_movies[i].user_rating;
-			user_TF_IDF_Vectors[i] = math.multiply(vector, rating);
-		}
-
-		search_vector = math.multiply(
-			math.apply(user_TF_IDF_Vectors, 0, math.sum),
-			1 / user_TF_IDF_Vectors.length
-		);
-		let v = [];
-		for (let i = 0; i < search_vector.length; i++) {
-			const el = search_vector[i];
-			v.push({ tag: ref_tags[i], score: el });
-		}
-		v = v.sort((a, b) => a.score - b.score);
-		// print("");
-	}
-
-	let recommended_list = await get_recommended(
-		search_vector,
-		database_TF_IDF_Vectors,
-		filtered_database,
-		search_vector_name
+	]).allowDiskUse(true);
+	recommended_list = recommended_list[0].recommended;
+	recommended_list = recommended_list.filter(
+		(movie) => movie._id !== undefined
 	);
-
-	let ignore_list = [...user_movies];
+	recommended_list = recommended_list.map((movie) => {
+		return { ...movie, tags: movie.tags.map((tag) => tag.term) };
+	});
+	let ignore_list = [];
 	let search = req.query.tag;
 	let search_list = [];
 	search ? (search_list = [search]) : (search_list = []);
@@ -329,5 +420,233 @@ router.get("/", async (req, res) => {
 		data: filtered_recommended_list,
 		search: search
 	});
+});
+router.get("/test", async (req, res) => {
+	// let user_movies = require("../json/users/ropeiscut-movies.json").movies;
+
+	// const newUser = {
+	// 	_id: "ropeiscut",
+	// 	movies: []
+	// };
+	// let ratings = user_movies.map((movie) => movie.rating);
+	// ratings = ratings.filter((rating) => rating !== null);
+	// let avg = math.mean(ratings);
+	// user_movies.forEach((movie) => {
+	// 	const movieObj = {
+	// 		_id: parseInt(movie.id),
+	// 		rating: movie.rating || 1
+	// 	};
+	// 	if (!isNaN(movieObj._id)) {
+	// 		newUser.movies.push(movieObj);
+	// 	}
+	// });
+
+	// let a = await User.create(newUser);
+
+	let tags = await User.aggregate([
+		{
+			$unwind: {
+				path: "$movies"
+			}
+		},
+		{
+			$set: {
+				movie_id: "$movies._id"
+			}
+		},
+		{
+			$project: {
+				movie_id: 1
+			}
+		},
+		{
+			$lookup: {
+				from: "movies",
+				localField: "movie_id",
+				foreignField: "_id",
+				as: "movie_id"
+			}
+		},
+		{
+			$set: {
+				movie_id: {
+					$arrayElemAt: ["$movie_id", 0]
+				}
+			}
+		},
+		{
+			$set: {
+				movie_id: {
+					$map: {
+						input: "$movie_id.tags",
+						as: "el",
+						in: "$$el.term"
+					}
+				}
+			}
+		},
+		{
+			$unwind: {
+				path: "$movie_id"
+			}
+		},
+		{
+			$lookup: {
+				from: "tags",
+				localField: "movie_id",
+				foreignField: "_id",
+				as: "movie_id"
+			}
+		},
+		{
+			$set: {
+				movie_id: {
+					$arrayElemAt: ["$movie_id", 0]
+				}
+			}
+		},
+		{
+			$group: {
+				_id: "ropeiscut",
+				movie_id: {
+					$addToSet: "$movie_id"
+				}
+			}
+		}
+	]);
+	tags = tags[0].movie_id;
+	let count = tags.map((tag) => tag.count);
+	const avg_tag_count = math.mean(count);
+	const std_tag_count = math.std(count);
+	tags = tags.sort((a, b) => b.count - a.count);
+	tags = tags.filter(
+		(tag) => tag.count < avg_tag_count + 1.96 * std_tag_count
+	);
+	let tagsObj = new Map();
+	tags.forEach((tag, i) => {
+		tagsObj.set(tag._id, i);
+	});
+	// tags = tags.map((tag, i) => {
+	// 	return { ...tag, index: i };
+	// });
+
+	let movies = await Movie.aggregate([
+		{
+			$project: {
+				tags: 1,
+				vote_average: 1
+			}
+		},
+		{
+			$lookup: {
+				from: "tags",
+				localField: "tags.term",
+				foreignField: "_id",
+				as: "term"
+			}
+		},
+		{
+			$set: {
+				tags: {
+					$map: {
+						input: "$tags",
+						as: "el",
+						in: {
+							term: "$$el.term",
+							tf: "$$el.tf",
+							idf: {
+								$arrayElemAt: [
+									"$term.idf",
+									{
+										$indexOfArray: [
+											"$term._id",
+											"$$el.term"
+										]
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			$project: {
+				tags: 1,
+				vote_average: 1
+			}
+		}
+	]).allowDiskUse(true);
+	let movieavgrating = await Movie.aggregate([
+		{
+			$group: {
+				_id: null,
+				vote_average: {
+					$avg: "$vote_average"
+				}
+			}
+		}
+	]);
+	let usermovies = await User.findById("ropeiscut");
+
+	let usermoviesratings = usermovies.movies.map((el) => {
+		return el.rating;
+	});
+	usermovies = usermovies.movies.map((el) => {
+		return el._id;
+	});
+	movieavgrating = movieavgrating[0].vote_average;
+	usermovies = movies.filter((movie) => usermovies.includes(movie._id));
+
+	let alluservectors = [];
+	for (let i = 0; i < usermovies.length; i++) {
+		const movie = usermovies[i];
+
+		let movieVector = math.matrix(math.zeros([1, tags.length]), "sparse");
+		movie.tags.forEach((tag) => {
+			const index = tagsObj.get(tag.term);
+			if (index !== undefined) {
+				// usermovieavgrating
+				let tfidf =
+					(usermoviesratings[i] - usermovieavgrating) *
+					tag.tf *
+					tag.idf;
+				movieVector.set([0, index], tfidf);
+			}
+		});
+		alluservectors.push(movieVector);
+	}
+	let search_vector = math.multiply(
+		math.apply(alluservectors, 0, math.sum),
+		1 / alluservectors.length
+	);
+
+	let recommendedMovies = [];
+	for (let i = 0; i < movies.length; i++) {
+		const movie = movies[i];
+
+		let movieVector = math.matrix(math.zeros([1, tags.length]), "sparse");
+		movie.tags.forEach((tag) => {
+			const index = tagsObj.get(tag.term);
+			if (index !== undefined) {
+				// movieavgrating
+				let tfidf =
+					(movie.vote_average - movieavgrating) * tag.tf * tag.idf;
+				movieVector.set([0, index], tfidf);
+			}
+		});
+		let score = cosine_similarity(search_vector, movieVector);
+		recommendedMovies.push({ _id: movie._id, score: score });
+		if (i % 1000 == 0) {
+			console.log(`${i}/${movies.length}`);
+		}
+	}
+	let result = await User.updateOne(
+		{ _id: "ropeiscut" },
+		{ $set: { recommended: recommendedMovies } }
+	);
+	recommendedMovies = recommendedMovies.sort((a, b) => b.score - a.score);
+	res.redirect("/");
+	// movieVector = movieVector.toArray();
 });
 module.exports = router;

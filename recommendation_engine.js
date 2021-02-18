@@ -60,11 +60,14 @@ const avg_vectors = (vectors) => {
 	return avg_vector;
 };
 const cosine_similarity = (vectorA, vectorB) => {
-	vectorA = math.matrix(vectorA, "sparse");
-	vectorB = math.matrix(vectorB, "sparse");
+	// vectorA = math.matrix(vectorA, "dense");
+	// vectorB = math.matrix(vectorB, "dense");
 	const a_norm = math.hypot(vectorA);
 	const b_norm = math.hypot(vectorB);
-	const dot_result = math.dot(vectorA, vectorB);
+	const dot_result = math.dot(
+		math.transpose(vectorA),
+		math.transpose(vectorB)
+	);
 	let score = dot_result / (a_norm * b_norm);
 	if (isNaN(score)) {
 		score = 0;
@@ -287,8 +290,8 @@ const scrapeThumbnails = async (database) => {
 	const database_length = database.length;
 	for (let i = 0; i < database_length; i++) {
 		const movie = database[i];
-		const { id, thumbnail_url } = movie;
-		const path = "./public/thumbnails/" + id + "-thumb.jpg";
+		const { _id, thumbnail_url } = movie;
+		const path = "./public/thumbnails/" + _id + "-thumb.jpg";
 		try {
 			if (!fsSync.existsSync(path)) {
 				try {
@@ -311,5 +314,6 @@ module.exports = {
 	avg_vectors,
 	gen_ref_tags,
 	get_tag_count,
-	scrapeThumbnails
+	scrapeThumbnails,
+	cosine_similarity
 };
