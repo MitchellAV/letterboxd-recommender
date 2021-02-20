@@ -1,12 +1,10 @@
 const puppeteer = require("puppeteer-extra");
 const cheerio = require("cheerio");
 const fs = require("fs").promises;
-const { get_database } = require("./util");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
 const getLetterboxdUserMovies = async (user) => {
 	try {
-		const database = [...get_database(0, Infinity)];
 		const browser = await puppeteer.launch({
 			headless: false
 		});
@@ -31,11 +29,9 @@ const getLetterboxdUserMovies = async (user) => {
 
 					const el = children[i];
 
-					const film_name = $(el)
-						.find("div")
-						.attr("data-film-name")
-						.toLowerCase();
-					movie.title = film_name;
+					const film_name = $(el).find("div").attr("data-film-name");
+
+					movie.title = film_name.toLowerCase();
 
 					let film_rating_class = $(el).find("span.rating");
 

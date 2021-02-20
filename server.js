@@ -321,3 +321,4 @@ app.use(express.json());
 app.set("view engine", "ejs");
 
 app.use("/", require("./routes/recommender"));
+app.use("/", require("./routes/letterboxd"));

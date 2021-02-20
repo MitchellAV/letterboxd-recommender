@@ -206,7 +206,7 @@ router.get("/:username/personal", async (req, res) => {
 				}
 			}
 		]);
-		if (usermovies.legnth === 0) {
+		if (usermovies.length === 0) {
 			throw new Error("no account found");
 		}
 		usermovies = usermovies[0].movies;
@@ -267,8 +267,8 @@ router.get("/:username/personal", async (req, res) => {
 	});
 });
 
-router.get("/", async (req, res) => {
-	const MOVIES = req.app.get("MOVIES");
+router.get("/:username", async (req, res) => {
+	// const MOVIES = req.app.get("MOVIES");
 	// let filtered_database = await Movie.find({});
 
 	// let id = parseInt(req.query.id);
@@ -370,25 +370,35 @@ router.get("/", async (req, res) => {
 	// 	filtered_database,
 	// 	search_vector_name
 	// );
-	let usermovies = await User.aggregate([
-		{
-			$match: {
-				_id: "ropeiscut"
-			}
-		},
-		{
-			$project: {
-				movies: {
-					$map: {
-						input: "$movies",
-						as: "el",
-						in: "$$el._id"
+	const username = req.params.username;
+	let usermovies;
+	try {
+		usermovies = await User.aggregate([
+			{
+				$match: {
+					_id: username
+				}
+			},
+			{
+				$project: {
+					movies: {
+						$map: {
+							input: "$movies",
+							as: "el",
+							in: "$$el._id"
+						}
 					}
 				}
 			}
+		]);
+		if (usermovies.length === 0) {
+			throw new Error("no account found");
 		}
-	]);
-	usermovies = usermovies[0].movies;
+		usermovies = usermovies[0].movies;
+	} catch (err) {
+		console.log(err);
+		return res.redirect("/");
+	}
 
 	let filter = req.query.tag;
 	let min_vote_count = req.query.min_vote_count || 1;
@@ -411,110 +421,115 @@ router.get("/", async (req, res) => {
 	// });
 
 	let recommendations;
-	if (filter) {
-		recommendations = await Movie.aggregate([
-			{
-				$match: {
-					$expr: {
-						$and: [
-							{
-								$in: ["ropeiscut", "$score._id"]
-							},
-							{
-								$in: [filter, "$tags.term"]
-							},
-							{
-								$gte: ["$vote_count", min_vote_count]
-							},
-							{
-								$gte: ["$runtime", min_runtime]
-							},
-							{
-								$gte: ["$vote_average", min_vote_average]
-							},
-							{
-								$not: [{ $in: ["$_id", usermovies] }]
-							}
-						]
+	try {
+		if (filter) {
+			recommendations = await Movie.aggregate([
+				{
+					$match: {
+						$expr: {
+							$and: [
+								{
+									$in: [username, "$score._id"]
+								},
+								{
+									$in: [filter, "$tags.term"]
+								},
+								{
+									$gte: ["$vote_count", min_vote_count]
+								},
+								{
+									$gte: ["$runtime", min_runtime]
+								},
+								{
+									$gte: ["$vote_average", min_vote_average]
+								},
+								{
+									$not: [{ $in: ["$_id", usermovies] }]
+								}
+							]
+						}
 					}
-				}
-			},
-			{
-				$addFields: {
-					order: {
-						$filter: {
-							input: "$score",
-							as: "el",
-							cond: {
-								$eq: ["$$el._id", "ropeiscut"]
+				},
+				{
+					$addFields: {
+						order: {
+							$filter: {
+								input: "$score",
+								as: "el",
+								cond: {
+									$eq: ["$$el._id", username]
+								}
 							}
 						}
 					}
+				},
+				{
+					$sort: {
+						"order.score": -1
+					}
+				},
+				{
+					$skip: page * 100
+				},
+				{
+					$limit: 100
 				}
-			},
-			{
-				$sort: {
-					"order.score": -1
-				}
-			},
-			{
-				$skip: page * 100
-			},
-			{
-				$limit: 100
-			}
-		]);
-	} else {
-		recommendations = await Movie.aggregate([
-			{
-				$match: {
-					$expr: {
-						$and: [
-							{
-								$in: ["ropeiscut", "$score._id"]
-							},
+			]);
+		} else {
+			recommendations = await Movie.aggregate([
+				{
+					$match: {
+						$expr: {
+							$and: [
+								{
+									$in: [username, "$score._id"]
+								},
 
-							{
-								$gte: ["$vote_count", min_vote_count]
-							},
-							{
-								$gte: ["$runtime", min_runtime]
-							},
-							{
-								$gte: ["$vote_average", min_vote_average]
-							},
-							{
-								$not: [{ $in: ["$_id", usermovies] }]
-							}
-						]
+								{
+									$gte: ["$vote_count", min_vote_count]
+								},
+								{
+									$gte: ["$runtime", min_runtime]
+								},
+								{
+									$gte: ["$vote_average", min_vote_average]
+								},
+								{
+									$not: [{ $in: ["$_id", usermovies] }]
+								}
+							]
+						}
 					}
-				}
-			},
-			{
-				$addFields: {
-					order: {
-						$filter: {
-							input: "$score",
-							as: "el",
-							cond: {
-								$eq: ["$$el._id", "ropeiscut"]
+				},
+				{
+					$addFields: {
+						order: {
+							$filter: {
+								input: "$score",
+								as: "el",
+								cond: {
+									$eq: ["$$el._id", username]
+								}
 							}
 						}
 					}
+				},
+				{
+					$sort: {
+						"order.score": -1
+					}
+				},
+				{
+					$skip: page * 100
+				},
+				{
+					$limit: 100
 				}
-			},
-			{
-				$sort: {
-					"order.score": -1
-				}
-			},
-			{
-				$skip: page * 100
-			},
-			{
-				$limit: 100
-			}
-		]);
+			]);
+		}
+	} catch (err) {
+		console.log(err);
+		return res.redirect("/");
 	}
 
 	// let recommended_list = await Movie.aggregate([
@@ -636,64 +651,82 @@ router.get("/", async (req, res) => {
 		search: filter
 	});
 });
-router.get("/test", async (req, res) => {
-	// let user_movies = require("../json/users/ropeiscut-movies.json").movies;
+router.get("/:username/update", async (req, res) => {
+	const username = req.params.username;
+	let user_movies = require(`../json/users/${username}-movies.json`).movies;
 
-	// const newUser = {
-	// 	_id: "ropeiscut",
-	// 	movies: []
-	// };
-	// let ratings = user_movies.map((movie) => movie.rating);
-	// ratings = ratings.filter((rating) => rating !== null);
-	// let avg = math.mean(ratings);
-	// user_movies.forEach((movie) => {
-	// 	const movieObj = {
-	// 		_id: parseInt(movie.id),
-	// 		rating: movie.rating || avg
-	// 	};
-	// 	if (!isNaN(movieObj._id)) {
-	// 		newUser.movies.push(movieObj);
-	// 	}
-	// });
-
-	// let a = await User.create(newUser);
+	const newUser = {
+		_id: "ropeiscut",
+		movies: [],
+		recommended: []
+	};
+	let ratings = user_movies.map((movie) => movie.rating);
+	ratings = ratings.filter((rating) => rating !== null);
+	let avg = math.mean(ratings);
+	user_movies.forEach((movie) => {
+		const movieObj = {
+			_id: parseInt(movie.id),
+			rating: movie.rating || avg
+		};
+		if (!isNaN(movieObj._id)) {
+			newUser.movies.push(movieObj);
+		}
+	});
+	const isFound = await User.findById(username).lean();
+	if (isFound) {
+		await User.updateOne({ _id: username }, newUser);
+	}
 
 	let tags = await User.aggregate([
+		{
+			$match: {
+				_id: username
+			}
+		},
+		{
+			$project: {
+				movies: 1
+			}
+		},
 		{
 			$unwind: {
 				path: "$movies"
 			}
 		},
 		{
-			$set: {
-				movie_id: "$movies._id"
-			}
-		},
-		{
-			$project: {
-				movie_id: 1
-			}
-		},
-		{
 			$lookup: {
 				from: "movies",
-				localField: "movie_id",
+				localField: "movies._id",
 				foreignField: "_id",
-				as: "movie_id"
+				as: "movies"
 			}
 		},
 		{
-			$set: {
-				movie_id: {
-					$arrayElemAt: ["$movie_id", 0]
+			$match: {
+				$expr: {
+					$not: {
+						$eq: [
+							{
+								$size: "$movies"
+							},
+							0
+						]
+					}
 				}
 			}
 		},
 		{
 			$set: {
-				movie_id: {
+				movies: {
+					$arrayElemAt: ["$movies", 0]
+				}
+			}
+		},
+		{
+			$set: {
+				movies: {
 					$map: {
-						input: "$movie_id.tags",
+						input: "$movies.tags",
 						as: "el",
 						in: "$$el.term"
 					}
@@ -702,34 +735,19 @@ router.get("/test", async (req, res) => {
 		},
 		{
 			$unwind: {
-				path: "$movie_id"
-			}
-		},
-		{
-			$lookup: {
-				from: "tags",
-				localField: "movie_id",
-				foreignField: "_id",
-				as: "movie_id"
-			}
-		},
-		{
-			$set: {
-				movie_id: {
-					$arrayElemAt: ["$movie_id", 0]
-				}
+				path: "$movies"
 			}
 		},
 		{
 			$group: {
-				_id: "ropeiscut",
-				movie_id: {
-					$addToSet: "$movie_id"
+				_id: "$_id",
+				tags: {
+					$push: "$movies"
 				}
 			}
 		}
 	]);
-	tags = tags[0].movie_id;
+	tags = tags[0].tags;
 	let count = tags.map((tag) => tag.count);
 	const avg_tag_count = math.mean(count);
 	const std_tag_count = math.std(count);
