@@ -4,6 +4,17 @@ const Schema = mongoose.Schema;
 const hasOverview = (str) => {
 	return str !== "" && str.toLowerCase() !== "none available";
 };
+
+const scoreSchema = new Schema({
+	_id: {
+		type: String
+	},
+	score: {
+		type: Number,
+		required: true
+	}
+});
+
 const movieSchema = new Schema(
 	{
 		_id: Number,
@@ -18,7 +29,7 @@ const movieSchema = new Schema(
 		keywords: [String],
 		tags: [String],
 		thumbnail_url: { type: String, required: true },
-		score: Number,
+		score: [scoreSchema],
 		adult: { type: Boolean, required: true },
 		genres: [{ type: String, required: true }],
 		cast: [String],

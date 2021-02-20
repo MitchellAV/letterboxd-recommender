@@ -1,12 +1,10 @@
 const puppeteer = require("puppeteer-extra");
 const cheerio = require("cheerio");
 const fs = require("fs").promises;
-
 const { get_database } = require("./util");
-
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
-const getMovies = async (user) => {
+const getLetterboxdUserMovies = async (user) => {
 	try {
 		const database = [...get_database(0, Infinity)];
 		const browser = await puppeteer.launch({
@@ -96,8 +94,5 @@ const getMovies = async (user) => {
 	}
 	console.log("Finished getting movies from user.");
 };
-const main = async () => {
-	await getMovies("ropeiscut");
-};
 
-main();
+module.exports = { getLetterboxdUserMovies };

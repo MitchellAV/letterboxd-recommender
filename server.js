@@ -4,6 +4,7 @@ var cors = require("cors");
 const mongoose = require("mongoose");
 const Movie = require("./models/movie");
 const Tag = require("./models/tag");
+const User = require("./models/user");
 
 const { get_database } = require("./recommendation_engine.js");
 const {
@@ -12,6 +13,7 @@ const {
 	cleanDatabaseCredits
 } = require("./filter");
 const app = express();
+
 mongoose
 	.connect("mongodb://localhost:27017/movies-db", {
 		useNewUrlParser: true,
@@ -21,6 +23,81 @@ mongoose
 	})
 	.then(async (result) => {
 		console.log("Sucessfully connected to database movies-db");
+		// await Movie.updateMany({}, [
+		// 	{
+		// 		$set: {
+		// 			score: [
+		// 				{
+		// 					_id: "ropeiscut",
+		// 					score: 0
+		// 				}
+		// 			]
+		// 		}
+		// 	}
+		// ]);
+		// let usermovies = await User.findById("ropeiscut").lean();
+		// usermovies = usermovies.recommended;
+		// for (let i = 0; i < usermovies.length; i++) {
+		// 	const movie = usermovies[i];
+		// 	const { _id, score } = movie;
+		// 	try {
+		// 		let res = await Movie.updateOne(
+		// 			{ _id: _id, "score._id": "ropeiscut" },
+		// 			{ "score.$.score": score }
+		// 		);
+		// 		if (i % 1000 == 0) {
+		// 			console.log(`${i}/${usermovies.length}`);
+		// 		}
+		// 	} catch (err) {
+		// 		console.log(err);
+		// 	}
+		// }
+		// const MOVIES = await Movie.aggregate([
+		// 	{
+		// 		$lookup: {
+		// 			from: "tags",
+		// 			localField: "tags.term",
+		// 			foreignField: "_id",
+		// 			as: "term"
+		// 		}
+		// 	},
+		// 	{
+		// 		$set: {
+		// 			tags: {
+		// 				$map: {
+		// 					input: "$tags",
+		// 					as: "el",
+		// 					in: {
+		// 						term: "$$el.term",
+		// 						tf: "$$el.tf",
+		// 						idf: {
+		// 							$arrayElemAt: [
+		// 								"$term.idf",
+		// 								{
+		// 									$indexOfArray: [
+		// 										"$term._id",
+		// 										"$$el.term"
+		// 									]
+		// 								}
+		// 							]
+		// 						}
+		// 					}
+		// 				}
+		// 			}
+		// 		}
+		// 	},
+		// 	{
+		// 		$unset: [
+		// 			"term",
+		// 			"database_avg_rating",
+		// 			"numTags",
+		// 			"createdAt",
+		// 			"updatedAt"
+		// 		]
+		// 	}
+		// ]).allowDiskUse(true);
+		console.log("Movies loaded");
+		// app.set("MOVIES", MOVIES);
 		app.listen(3000, console.log("Server started on localhost:3000"));
 
 		// await Movie.updateMany({}, [

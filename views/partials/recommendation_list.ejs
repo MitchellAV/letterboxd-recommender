@@ -1,7 +1,7 @@
 <% recommendations.forEach(book=> { const {_id,title,overview,vote_count, vote_average,crew,
 	release_date,production_companies,production_countries, runtime,keywords,adult, revenue,genres, original_title,
-	original_language, spoken_languages,cast,tags,score,imdb_id,budget,maxTag,user_rating}= book %> <article
-		class="book">
+	original_language, spoken_languages,cast,tags,score,imdb_id,budget,maxTag,user_rating,screenplay,dp,writers}= book
+	%> <article class="book">
 		<h2 class="book-title">
 			<%= title %>
 		</h2>
@@ -66,16 +66,30 @@
 						</a>
 						<%})%>
 				</div>
-				<p><b>Tags:</b></p>
+				<p><b>Directors:</b></p>
 				<div class='tags'>
-					<% tags.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% crew.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
-				<p><b>Directors:</b></p>
+				<p><b>Screenplay:</b></p>
 				<div class='tags'>
-					<% crew.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% screenplay.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+							<%= tag%>
+						</a>
+						<%})%>
+				</div>
+				<p><b>Director of Photography:</b></p>
+				<div class='tags'>
+					<% dp.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+							<%= tag%>
+						</a>
+						<%})%>
+				</div>
+				<p><b>Writers:</b></p>
+				<div class='tags'>
+					<% writers.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>

@@ -181,34 +181,94 @@ const filter_tags = (ref_tags, count_books_tag) => {
 	ref_tags = c.map((movie) => movie.tag);
 	return [ref_tags, count_books_tag];
 };
-router.get("/personal", async (req, res) => {
-	let user_movies = require("../json/users/ropeiscut-movies.json").movies;
-	user_movies = merge_movies(filtered_database, user_movies);
 
-	let ignore_list = [];
-	let search = req.query.tag;
-	let search_list = [];
-	search ? (search_list = [search]) : (search_list = []);
-	const filterlist = {
-		tags: search_list
-	};
+router.get("/:username/personal", async (req, res) => {
+	let username = req.params.username;
+	let filter = req.query.tag;
+	let sort = req.query.sort || "order.score";
+	let usermovies;
+	try {
+		usermovies = await User.aggregate([
+			{
+				$match: {
+					_id: username
+				}
+			},
+			{
+				$project: {
+					movies: {
+						$map: {
+							input: "$movies",
+							as: "el",
+							in: "$$el._id"
+						}
+					}
+				}
+			}
+		]);
+		if (usermovies.legnth === 0) {
+			throw new Error("no account found");
+		}
+		usermovies = usermovies[0].movies;
+	} catch (err) {
+		console.log(err);
+		return res.redirect("/");
+	}
+	let recommendations;
+	try {
+		recommendations = await Movie.aggregate([
+			{
+				$match: {
+					$expr: {
+						$and: [
+							{
+								$in: ["$_id", usermovies]
+							}
+						]
+					}
+				}
+			},
+			{
+				$addFields: {
+					order: {
+						$filter: {
+							input: "$score",
+							as: "el",
+							cond: {
+								$eq: ["$$el._id", username]
+							}
+						}
+					}
+				}
+			},
+			{
+				$sort: {
+					"order.score": -1
+				}
+			}
+		]);
+	} catch (err) {
+		console.log(err);
+		return res.redirect("/");
+	}
 
-	const filtered_recommended_list = filter_recommended(
-		user_movies,
-		ignore_list,
-		filterlist,
-		user_movies.length
-	);
-
-	await scrapeThumbnails(filtered_recommended_list);
+	recommendations = recommendations.map((movie) => {
+		return {
+			...movie,
+			tags: movie.tags.map((tag) => tag.term),
+			score: movie.score[0].score
+		};
+	});
+	await scrapeThumbnails(recommendations);
 
 	res.render("pages/recommended", {
-		data: filtered_recommended_list,
-		search: search
+		data: recommendations,
+		search: filter
 	});
 });
 
 router.get("/", async (req, res) => {
+	const MOVIES = req.app.get("MOVIES");
 	// let filtered_database = await Movie.find({});
 
 	// let id = parseInt(req.query.id);
@@ -310,115 +370,270 @@ router.get("/", async (req, res) => {
 	// 	filtered_database,
 	// 	search_vector_name
 	// );
-	let usermovies = await User.findById("ropeiscut");
-
-	usermovies = usermovies.movies.map((el) => {
-		return el._id;
-	});
-	let recommended_list = await User.aggregate([
+	let usermovies = await User.aggregate([
+		{
+			$match: {
+				_id: "ropeiscut"
+			}
+		},
 		{
 			$project: {
-				recommended: 1
-			}
-		},
-		{
-			$unwind: {
-				path: "$recommended"
-			}
-		},
-		{
-			$sort: {
-				"recommended.score": -1
-			}
-		},
-		{
-			$set: {
-				score: "$recommended.score"
-			}
-		},
-		{
-			$lookup: {
-				from: "movies",
-				let: {
-					movie_id: "$recommended._id"
-				},
-				pipeline: [
-					{
-						$match: {
-							$expr: {
-								$and: [
-									{
-										$eq: ["$$movie_id", "$_id"]
-									},
-									// {
-									// 	$gte: ["$vote_count", 1000]
-									// },
-									{
-										$gte: ["$runtime", 30]
-									},
-									// {
-									// 	$gte: ["$vote_average", 5]
-									// },
-									{ $not: [{ $in: ["$_id", usermovies] }] }
-								]
-							}
-						}
+				movies: {
+					$map: {
+						input: "$movies",
+						as: "el",
+						in: "$$el._id"
 					}
-				],
-				as: "recommended"
-			}
-		},
-		{
-			$set: {
-				recommended: {
-					$arrayElemAt: ["$recommended", 0]
-				}
-			}
-		},
-		{
-			$set: {
-				"recommended.score": "$score"
-			}
-		},
-		{
-			$limit: 1000
-		},
-		{
-			$group: {
-				_id: "_id",
-				recommended: {
-					$push: "$recommended"
 				}
 			}
 		}
-	]).allowDiskUse(true);
-	recommended_list = recommended_list[0].recommended;
-	recommended_list = recommended_list.filter(
-		(movie) => movie._id !== undefined
-	);
-	recommended_list = recommended_list.map((movie) => {
-		return { ...movie, tags: movie.tags.map((tag) => tag.term) };
+	]);
+	usermovies = usermovies[0].movies;
+
+	let filter = req.query.tag;
+	let min_vote_count = req.query.min_vote_count || 1;
+	let min_vote_average = req.query.min_vote_average || 0;
+	let min_runtime = req.query.min_runtime || 40;
+	let page = req.query.page || 0;
+	let filter_list = [];
+	filter ? (filter_list = [filter]) : (filter_list = []);
+	// {
+	// 	$not: [{ $in: ["$_id", usermovies] }];
+	// }
+	// let filtered_movies = MOVIES.filter((movie) => {
+	// 	const { _id, vote_count, vote_average, runtime, tags } = movie;
+	// 	return (
+	// 		vote_count >= 1000 &&
+	// 		runtime >= 60 &&
+	// 		vote_average >= 6 &&
+	// 		!usermovies.includes(_id)
+	// 	);
+	// });
+
+	let recommendations;
+	if (filter) {
+		recommendations = await Movie.aggregate([
+			{
+				$match: {
+					$expr: {
+						$and: [
+							{
+								$in: ["ropeiscut", "$score._id"]
+							},
+							{
+								$in: [filter, "$tags.term"]
+							},
+							{
+								$gte: ["$vote_count", min_vote_count]
+							},
+							{
+								$gte: ["$runtime", min_runtime]
+							},
+							{
+								$gte: ["$vote_average", min_vote_average]
+							},
+							{
+								$not: [{ $in: ["$_id", usermovies] }]
+							}
+						]
+					}
+				}
+			},
+			{
+				$addFields: {
+					order: {
+						$filter: {
+							input: "$score",
+							as: "el",
+							cond: {
+								$eq: ["$$el._id", "ropeiscut"]
+							}
+						}
+					}
+				}
+			},
+			{
+				$sort: {
+					"order.score": -1
+				}
+			},
+			{
+				$skip: page * 100
+			},
+			{
+				$limit: 100
+			}
+		]);
+	} else {
+		recommendations = await Movie.aggregate([
+			{
+				$match: {
+					$expr: {
+						$and: [
+							{
+								$in: ["ropeiscut", "$score._id"]
+							},
+
+							{
+								$gte: ["$vote_count", min_vote_count]
+							},
+							{
+								$gte: ["$runtime", min_runtime]
+							},
+							{
+								$gte: ["$vote_average", min_vote_average]
+							},
+							{
+								$not: [{ $in: ["$_id", usermovies] }]
+							}
+						]
+					}
+				}
+			},
+			{
+				$addFields: {
+					order: {
+						$filter: {
+							input: "$score",
+							as: "el",
+							cond: {
+								$eq: ["$$el._id", "ropeiscut"]
+							}
+						}
+					}
+				}
+			},
+			{
+				$sort: {
+					"order.score": -1
+				}
+			},
+			{
+				$skip: page * 100
+			},
+			{
+				$limit: 100
+			}
+		]);
+	}
+
+	// let recommended_list = await Movie.aggregate([
+	// 	{
+	// 		$match: {
+	// 			$expr: {
+	// 				$and: [
+	// 					{
+	// 						$gte: ["$vote_count", 1000]
+	// 					},
+	// 					{
+	// 						$gte: ["$runtime", 60]
+	// 					},
+	// 					{
+	// 						$gte: ["$vote_average", 6]
+	// 					},
+	// 					{
+	// 						$not: [{ $in: ["$_id", usermovies] }]
+	// 					}
+	// 				]
+	// 			}
+	// 		}
+	// 	},
+	// 	{
+	// 		$lookup: {
+	// 			from: "users",
+	// 			let: {
+	// 				username: "ropeiscut",
+	// 				movie_id: "$_id"
+	// 			},
+	// 			pipeline: [
+	// 				{
+	// 					$match: {
+	// 						$expr: {
+	// 							$and: [
+	// 								{
+	// 									$eq: ["$$username", "$_id"]
+	// 								}
+	// 							]
+	// 						}
+	// 					}
+	// 				},
+	// 				{
+	// 					$project: {
+	// 						recommended: {
+	// 							$filter: {
+	// 								input: "$recommended",
+	// 								as: "el",
+	// 								cond: {
+	// 									$eq: ["$$el._id", "$$movie_id"]
+	// 								}
+	// 							}
+	// 						}
+	// 					}
+	// 				},
+	// 				{
+	// 					$set: {
+	// 						recommended: {
+	// 							$arrayElemAt: ["$recommended", 0]
+	// 						}
+	// 					}
+	// 				}
+	// 			],
+	// 			as: "score"
+	// 		}
+	// 	},
+	// 	{
+	// 		$set: {
+	// 			score: {
+	// 				$arrayElemAt: ["$score", 0]
+	// 			}
+	// 		}
+	// 	},
+	// 	{
+	// 		$set: {
+	// 			score: "$score.recommended.score"
+	// 		}
+	// 	}
+	// 	// {
+	// 	// 	$match: {
+	// 	// 		score: {
+	// 	// 			$gt: 0
+	// 	// 		}
+	// 	// 	}
+	// 	// }
+	// 	// {
+	// 	// 	$sort: {
+	// 	// 		score: -1
+	// 	// 	}
+	// 	// },
+	// 	// {
+	// 	// 	$limit: 1000
+	// 	// }
+	// ]).allowDiskUse(true);
+
+	// recommended_list = recommended_list.sort((a, b) => b.score - a.score);
+	recommendations = recommendations.map((movie) => {
+		return {
+			...movie,
+			tags: movie.tags.map((tag) => tag.term),
+			score: movie.score[0].score
+		};
 	});
-	let ignore_list = [];
-	let search = req.query.tag;
-	let search_list = [];
-	search ? (search_list = [search]) : (search_list = []);
-	const filterlist = {
-		tags: search_list
-	};
+	// if (search_list.length !== 0) {
+	// 	recommended_list = recommended_list.filter((movie) =>
+	// 		movie.tags.some((r) => search_list.includes(r))
+	// 	);
+	// }
+	// recommendations.forEach((movie) => {
+	// 	let { score, tags } = movie;
+	// 	score = score[0].score;
+	// 	tags = tags.map((tag) => tag.term);
+	// });
 
-	let filtered_recommended_list = filter_recommended(
-		recommended_list,
-		ignore_list,
-		filterlist,
-		100
-	);
-
-	await scrapeThumbnails(filtered_recommended_list);
+	await scrapeThumbnails(recommendations);
 
 	res.render("pages/recommended", {
-		data: filtered_recommended_list,
-		search: search
+		data: recommendations,
+		search: filter
 	});
 });
 router.get("/test", async (req, res) => {
@@ -434,7 +649,7 @@ router.get("/test", async (req, res) => {
 	// user_movies.forEach((movie) => {
 	// 	const movieObj = {
 	// 		_id: parseInt(movie.id),
-	// 		rating: movie.rating || 1
+	// 		rating: movie.rating || avg
 	// 	};
 	// 	if (!isNaN(movieObj._id)) {
 	// 		newUser.movies.push(movieObj);
@@ -518,10 +733,10 @@ router.get("/test", async (req, res) => {
 	let count = tags.map((tag) => tag.count);
 	const avg_tag_count = math.mean(count);
 	const std_tag_count = math.std(count);
-	tags = tags.sort((a, b) => b.count - a.count);
-	tags = tags.filter(
-		(tag) => tag.count < avg_tag_count + 1.96 * std_tag_count
-	);
+	// tags = tags.sort((a, b) => b.count - a.count);
+	// tags = tags.filter(
+	// 	(tag) => tag.count < avg_tag_count + 1.96 * std_tag_count
+	// );
 	let tagsObj = new Map();
 	tags.forEach((tag, i) => {
 		tagsObj.set(tag._id, i);
@@ -587,22 +802,22 @@ router.get("/test", async (req, res) => {
 			}
 		}
 	]);
-	let usermovies = await User.findById("ropeiscut");
+	let usermovieswrating = await User.findById("ropeiscut");
 
-	let usermoviesratings = usermovies.movies.map((el) => {
-		return el.rating;
-	});
-	usermovies = usermovies.movies.map((el) => {
-		return el._id;
-	});
+	let usermovieavgrating = math.mean(
+		usermovies.movies.map((movie) => movie.score)
+	);
 	movieavgrating = movieavgrating[0].vote_average;
-	usermovies = movies.filter((movie) => usermovies.includes(movie._id));
-
+	let usermovies = movies.filter((movie) =>
+		usermovies.movies.includes(movie._id)
+	);
+	// add user rating to movies object
 	let alluservectors = [];
 	for (let i = 0; i < usermovies.length; i++) {
 		const movie = usermovies[i];
 
 		let movieVector = math.matrix(math.zeros([1, tags.length]), "sparse");
+		let tagWeights = [];
 		movie.tags.forEach((tag) => {
 			const index = tagsObj.get(tag.term);
 			if (index !== undefined) {
@@ -612,14 +827,25 @@ router.get("/test", async (req, res) => {
 					tag.tf *
 					tag.idf;
 				movieVector.set([0, index], tfidf);
+				const weight = {
+					term: tag.term,
+					index,
+					tfidf
+				};
+				tagWeights.push(weight);
 			}
 		});
+		movieVector = movieVector.toArray();
 		alluservectors.push(movieVector);
 	}
 	let search_vector = math.multiply(
 		math.apply(alluservectors, 0, math.sum),
 		1 / alluservectors.length
 	);
+	let searchmap = search_vector[0].map((score, i) => {
+		return { tag: tags[i], score };
+	});
+	searchmap = searchmap.sort((a, b) => b.score - a.score);
 
 	let recommendedMovies = [];
 	for (let i = 0; i < movies.length; i++) {
@@ -630,8 +856,7 @@ router.get("/test", async (req, res) => {
 			const index = tagsObj.get(tag.term);
 			if (index !== undefined) {
 				// movieavgrating
-				let tfidf =
-					(movie.vote_average - movieavgrating) * tag.tf * tag.idf;
+				let tfidf = movie.vote_average * tag.tf * tag.idf;
 				movieVector.set([0, index], tfidf);
 			}
 		});
