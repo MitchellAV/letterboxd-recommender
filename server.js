@@ -96,8 +96,19 @@ mongoose
 		// 		]
 		// 	}
 		// ]).allowDiskUse(true);
+		const MOVIES = await Movie.aggregate([
+			{
+				$unset: [
+					"term",
+					"database_avg_rating",
+					"numTags",
+					"createdAt",
+					"updatedAt"
+				]
+			}
+		]).allowDiskUse(true);
 		console.log("Movies loaded");
-		// app.set("MOVIES", MOVIES);
+		app.set("MOVIES", MOVIES);
 		app.listen(3000, console.log("Server started on localhost:3000"));
 
 		// await Movie.updateMany({}, [
