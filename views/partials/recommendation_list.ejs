@@ -18,12 +18,12 @@
 					<%= adult %>
 				</p>
 				<p><b>Max Tag:</b>
-					<a class='tag' href=" /?tag=<%=maxTag%>">
+					<a class='tag' href="/<%=username%>/?tag=<%=maxTag%>">
 						<%= maxTag%>
 					</a>
 				</p>
 				<p><b>ID:</b>
-					<a class='tag' href=" /?id=<%=_id%>">
+					<a class='tag' href="/?id=<%=_id%>">
 						<%= _id%>
 					</a>
 				</p>
@@ -61,70 +61,70 @@
 				</p>
 				<p><b>Cast:</b></p>
 				<div class='tags'>
-					<% cast.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% cast.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Directors:</b></p>
 				<div class='tags'>
-					<% crew.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% crew.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Screenplay:</b></p>
 				<div class='tags'>
-					<% screenplay.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% screenplay.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Director of Photography:</b></p>
 				<div class='tags'>
-					<% dp.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% dp.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Writers:</b></p>
 				<div class='tags'>
-					<% writers.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% writers.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Production Companies:</b></p>
 				<div class='tags'>
-					<% production_companies.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% production_companies.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Production Country:</b></p>
 				<div class='tags'>
-					<% production_countries.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% production_countries.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Spoken Languages:</b></p>
 				<div class='tags'>
-					<% spoken_languages.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% spoken_languages.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Genres:</b></p>
 				<div class='tags'>
-					<% genres.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% genres.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
 				</div>
 				<p><b>Keywords:</b></p>
 				<div class='tags'>
-					<% keywords.forEach(tag=> {%> <a class='tag' href=" /?tag=<%=tag%>">
+					<% keywords.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?tag=<%=tag%>">
 							<%= tag%>
 						</a>
 						<%})%>
