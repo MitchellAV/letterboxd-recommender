@@ -109,6 +109,7 @@ mongoose
 		]).allowDiskUse(true);
 		console.log("Movies loaded");
 		app.set("MOVIES", MOVIES);
+		app.set("MOVIE_COUNT", MOVIES.length);
 		app.listen(3000, console.log("Server started on localhost:3000"));
 
 		// await Movie.updateMany({}, [

@@ -13,7 +13,12 @@ const scoreSchema = new Schema({
 	score: {
 		type: Number,
 		required: true
-	}
+	},
+	maxTag: {
+		type: String,
+		default: null
+	},
+	userRating: { type: Number, default: null }
 });
 
 const movieSchema = new Schema(

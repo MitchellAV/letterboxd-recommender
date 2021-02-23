@@ -183,9 +183,10 @@ const filter_tags = (ref_tags, count_books_tag) => {
 };
 
 router.get("/:username/personal", async (req, res) => {
-	let username = req.params.username;
-	let filter = req.query.tag;
-	let sort = req.query.sort || "order.score";
+	const username = req.params.username;
+	const filter = req.query.tag;
+	const page = parseInt(req.query.page) || 0;
+	const num_per_page = parseInt(req.query.num_per_page) || 20;
 
 	let usermovies;
 	try {
@@ -243,9 +244,76 @@ router.get("/:username/personal", async (req, res) => {
 				}
 			},
 			{
-				$sort: {
-					"order.score": -1
+				$set: {
+					score: {
+						$arrayElemAt: ["$score", 0]
+					}
 				}
+			},
+			{
+				$lookup: {
+					from: "users",
+					let: {
+						movie_id: "$_id",
+						user_id: "$score._id"
+					},
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$eq: ["$$user_id", "$_id"]
+								}
+							}
+						},
+						{
+							$unwind: {
+								path: "$movies"
+							}
+						},
+						{
+							$match: {
+								$expr: {
+									$eq: ["$$movie_id", "$movies._id"]
+								}
+							}
+						},
+						{
+							$project: {
+								"movies.rating": 1
+							}
+						},
+						{
+							$set: {
+								rating: "$movies.rating"
+							}
+						},
+						{
+							$unset: ["movies"]
+						}
+					],
+					as: "score.userRating"
+				}
+			},
+			{
+				$set: {
+					"score.userRating": {
+						$arrayElemAt: ["$score.userRating", 0]
+					}
+				}
+			},
+			{
+				$set: {
+					"score.userRating": "$score.userRating.rating"
+				}
+			},
+			{
+				$sort: { "order.score": -1 }
+			},
+			{
+				$skip: page * num_per_page
+			},
+			{
+				$limit: num_per_page
 			}
 		]);
 	} catch (err) {
@@ -257,7 +325,9 @@ router.get("/:username/personal", async (req, res) => {
 		return {
 			...movie,
 			tags: movie.tags.map((tag) => tag.term),
-			score: movie.score.filter((user) => user._id === username)[0].score
+			score: movie.score.score,
+			maxTag: movie.score.maxTag,
+			userRating: movie.score.userRating
 		};
 	});
 	await scrapeThumbnails(recommendations);
@@ -265,7 +335,8 @@ router.get("/:username/personal", async (req, res) => {
 	res.render("pages/personal", {
 		data: recommendations,
 		search: filter,
-		username: username
+		username: username,
+		page: page
 	});
 });
 
@@ -402,11 +473,11 @@ router.get("/:username", async (req, res) => {
 	}
 
 	let filter = req.query.tag;
-	let min_vote_count = parseInt(req.query.min_vote_count) || 1000;
+	let min_vote_count = parseInt(req.query.min_vote_count) || 100;
 	let min_vote_average = parseInt(req.query.min_vote_average) || 6;
-	let min_runtime = parseInt(req.query.min_runtime) || 60;
+	let min_runtime = parseInt(req.query.min_runtime) || 0;
 	let page = parseInt(req.query.page) || 0;
-	let num_per_page = parseInt(req.query.num_per_page) || 25;
+	let num_per_page = parseInt(req.query.num_per_page) || 20;
 	let filter_list = [];
 	filter ? (filter_list = [filter]) : (filter_list = []);
 	// {
@@ -534,100 +605,6 @@ router.get("/:username", async (req, res) => {
 		return res.redirect("/");
 	}
 
-	// let recommended_list = await Movie.aggregate([
-	// 	{
-	// 		$match: {
-	// 			$expr: {
-	// 				$and: [
-	// 					{
-	// 						$gte: ["$vote_count", 1000]
-	// 					},
-	// 					{
-	// 						$gte: ["$runtime", 60]
-	// 					},
-	// 					{
-	// 						$gte: ["$vote_average", 6]
-	// 					},
-	// 					{
-	// 						$not: [{ $in: ["$_id", usermovies] }]
-	// 					}
-	// 				]
-	// 			}
-	// 		}
-	// 	},
-	// 	{
-	// 		$lookup: {
-	// 			from: "users",
-	// 			let: {
-	// 				username: "ropeiscut",
-	// 				movie_id: "$_id"
-	// 			},
-	// 			pipeline: [
-	// 				{
-	// 					$match: {
-	// 						$expr: {
-	// 							$and: [
-	// 								{
-	// 									$eq: ["$$username", "$_id"]
-	// 								}
-	// 							]
-	// 						}
-	// 					}
-	// 				},
-	// 				{
-	// 					$project: {
-	// 						recommended: {
-	// 							$filter: {
-	// 								input: "$recommended",
-	// 								as: "el",
-	// 								cond: {
-	// 									$eq: ["$$el._id", "$$movie_id"]
-	// 								}
-	// 							}
-	// 						}
-	// 					}
-	// 				},
-	// 				{
-	// 					$set: {
-	// 						recommended: {
-	// 							$arrayElemAt: ["$recommended", 0]
-	// 						}
-	// 					}
-	// 				}
-	// 			],
-	// 			as: "score"
-	// 		}
-	// 	},
-	// 	{
-	// 		$set: {
-	// 			score: {
-	// 				$arrayElemAt: ["$score", 0]
-	// 			}
-	// 		}
-	// 	},
-	// 	{
-	// 		$set: {
-	// 			score: "$score.recommended.score"
-	// 		}
-	// 	}
-	// 	// {
-	// 	// 	$match: {
-	// 	// 		score: {
-	// 	// 			$gt: 0
-	// 	// 		}
-	// 	// 	}
-	// 	// }
-	// 	// {
-	// 	// 	$sort: {
-	// 	// 		score: -1
-	// 	// 	}
-	// 	// },
-	// 	// {
-	// 	// 	$limit: 1000
-	// 	// }
-	// ]).allowDiskUse(true);
-
-	// recommended_list = recommended_list.sort((a, b) => b.score - a.score);
 	recommendations = recommendations.map((movie) => {
 		return {
 			...movie,
@@ -635,16 +612,6 @@ router.get("/:username", async (req, res) => {
 			score: movie.score.filter((user) => user._id === username)[0].score
 		};
 	});
-	// if (search_list.length !== 0) {
-	// 	recommended_list = recommended_list.filter((movie) =>
-	// 		movie.tags.some((r) => search_list.includes(r))
-	// 	);
-	// }
-	// recommendations.forEach((movie) => {
-	// 	let { score, tags } = movie;
-	// 	score = score[0].score;
-	// 	tags = tags.map((tag) => tag.term);
-	// });
 
 	await scrapeThumbnails(recommendations);
 
@@ -665,6 +632,23 @@ router.get("/:username/update", async (req, res) => {
 	// 	console.log(err);
 	// 	return res.redirect(`/${username}/letterboxd`);
 	// }
+	try {
+		await Movie.updateMany(
+			{},
+			{
+				$addToSet: {
+					score: {
+						_id: username,
+						score: 0,
+						maxTag: null,
+						userRating: null
+					}
+				}
+			}
+		);
+	} catch (err) {
+		console.log(err);
+	}
 
 	if (usermovies === null && username !== "") {
 		const newUser = {
@@ -675,17 +659,7 @@ router.get("/:username/update", async (req, res) => {
 		const userToSave = new User(newUser);
 		try {
 			await userToSave.save();
-			await Movie.updateMany(
-				{},
-				{
-					$addToSet: {
-						score: {
-							_id: username,
-							score: 0
-						}
-					}
-				}
-			);
+
 			return res.redirect(`/${username}/letterboxd`);
 		} catch (err) {
 			console.error("Unable to save user to database");
@@ -797,17 +771,19 @@ router.get("/:username/update", async (req, res) => {
 	// const lower = min + (mid - min) / 2;
 	// const upper = max - (max - mid) / 2;
 	// tags = tags.sort((a, b) => a.idf - b.idf);
-	// tags = tags.filter((tag) => tag.idf < upper);
-	// tags = tags.filter((tag) => tag.idf > lower);
+
+	const movies = req.app.get("MOVIES");
+	tags = tags.filter((tag) => (tag.count / movies.length) * 100 <= 3);
+	tags = tags.filter((tag) => (tag.count / movies.length) * 100 >= 0.5);
+	tags = tags.map((tag) => tag._id);
+
 	let tagsObj = new Map();
 	tags.forEach((tag, i) => {
-		tagsObj.set(tag._id, i);
+		tagsObj.set(tag, i);
 	});
 	// tags = tags.map((tag, i) => {
 	// 	return { ...tag, index: i };
 	// });
-
-	const movies = req.app.get("MOVIES");
 
 	let usermoviesratings = usermovies.movies.map((movie) => movie.rating);
 	let avg_user_movie_rating = math.mean(usermoviesratings);
@@ -828,16 +804,21 @@ router.get("/:username/update", async (req, res) => {
 	let alluservectors = [];
 	for (let i = 0; i < usermovies.length; i++) {
 		const movie = usermovies[i];
-		let avg_tags_idf = math.mean(
-			movie.tags
-				.map((tag) => {
-					const index = tagsObj.get(tag._id);
-					if (index !== undefined) {
-						return tag.idf;
-					}
-				})
-				.filter((tag) => tag !== undefined)
-		);
+		let avg_tags_idf;
+		try {
+			avg_tags_idf = math.mean(
+				movie.tags
+					.map((tag) => {
+						const index = tagsObj.get(tag._id);
+						if (index !== undefined) {
+							return tag.idf;
+						}
+					})
+					.filter((tag) => tag !== undefined)
+			);
+		} catch (err) {
+			avg_tags_idf = 0;
+		}
 		let movieVector = math.matrix(math.zeros([1, tags.length]), "sparse");
 		movie.tags.forEach((tag) => {
 			const index = tagsObj.get(tag._id);
@@ -846,7 +827,7 @@ router.get("/:username/update", async (req, res) => {
 				let tfidf = tag.idf;
 				let ratingWeight = Math.pow(
 					movie.userRating / avg_user_movie_rating,
-					3
+					5
 				);
 				movieVector.set(
 					[0, index],
@@ -875,16 +856,21 @@ router.get("/:username/update", async (req, res) => {
 	let recommendedMovies = [];
 	for (let i = 0; i < movies.length; i++) {
 		const movie = movies[i];
-		let avg_tags_idf = math.mean(
-			movie.tags
-				.map((tag) => {
-					const index = tagsObj.get(tag._id);
-					if (index !== undefined) {
-						return tag.idf;
-					}
-				})
-				.filter((tag) => tag !== undefined)
-		);
+		let avg_tags_idf;
+		try {
+			avg_tags_idf = math.mean(
+				movie.tags
+					.map((tag) => {
+						const index = tagsObj.get(tag._id);
+						if (index !== undefined) {
+							return tag.idf;
+						}
+					})
+					.filter((tag) => tag !== undefined)
+			);
+		} catch (err) {
+			avg_tags_idf = 0;
+		}
 		let movieVector = math.matrix(math.zeros([1, tags.length]), "sparse");
 		movie.tags.forEach((tag) => {
 			const index = tagsObj.get(tag._id);
@@ -898,7 +884,7 @@ router.get("/:username/update", async (req, res) => {
 					(movie.vote_count + 2);
 				let ratingWeight = Math.pow(
 					corrected_vote_average / all_movies_average,
-					3
+					5
 				);
 
 				movieVector.set(
@@ -907,11 +893,11 @@ router.get("/:username/update", async (req, res) => {
 				);
 			}
 		});
-		let score = cosine_similarity(search_vector, movieVector);
+		let { score, maxIndex } = cosine_similarity(search_vector, movieVector);
 		recommendedMovies.push({ _id: movie._id, score: score });
 		await Movie.updateOne(
 			{ _id: movie._id, "score._id": username },
-			{ "score.$.score": score }
+			{ "score.$.score": score, "score.$.maxTag": tags[maxIndex] }
 		);
 		if (i % 1000 == 0) {
 			console.log(`${i}/${movies.length}`);
@@ -928,10 +914,16 @@ router.get("/:username/update", async (req, res) => {
 router.get("/movie/:id", async (req, res) => {
 	const id = req.params.id;
 	let page = parseInt(req.query.page) || 0;
-	let num_per_page = parseInt(req.query.num_per_page) || 25;
+	let num_per_page = parseInt(req.query.num_per_page) || 20;
 
 	let movie = await Movie.findById(id).lean();
-	let tags = movie.tags.map((tag) => tag._id);
+	const movies = req.app.get("MOVIES");
+
+	let tags = movie.tags.filter(
+		(tag) => (tag.count / movies.length) * 100 <= 3
+	);
+
+	tags = tags.map((tag) => tag._id);
 	// let idf = tags.map((tag) => tag.idf);
 	// const max = math.max(idf);
 	// const min = math.min(idf);
@@ -948,8 +940,6 @@ router.get("/movie/:id", async (req, res) => {
 	// tags = tags.map((tag, i) => {
 	// 	return { ...tag, index: i };
 	// });
-
-	const movies = req.app.get("MOVIES");
 
 	// add user rating to movies object
 	let all_movies_average = await Movie.aggregate([
@@ -1017,7 +1007,7 @@ router.get("/movie/:id", async (req, res) => {
 					(movie.vote_count + 2);
 				let ratingWeight = Math.pow(
 					corrected_vote_average / all_movies_average,
-					3
+					5
 				);
 				movieVector.set(
 					[0, index],
@@ -1025,8 +1015,12 @@ router.get("/movie/:id", async (req, res) => {
 				);
 			}
 		});
-		let score = cosine_similarity(search_vector, movieVector);
-		recommendations.push({ ...movie, score: score });
+		let { score, maxIndex } = cosine_similarity(search_vector, movieVector);
+		recommendations.push({
+			...movie,
+			score: score,
+			maxTag: tags[maxIndex]
+		});
 
 		if (i % 1000 == 0) {
 			console.log(`${i}/${movies.length}`);

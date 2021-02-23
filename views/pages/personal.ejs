@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="../style.css">
+	<link rel="stylesheet" href="../../style.css">
 	<title>Recommendations</title>
 </head>
 
@@ -13,15 +13,19 @@
 		<%= search%>
 	</h1>
 	<div>
-		<a class='btn' href=<%=`/${username}/personal/?page=${page-1}` %> >Previous Page</a>
-		<a class='btn' href=<%=`/${username}/personal/?page=${page+1}` %> >Next Page</a>
+		<% if (page !==0) { %>
+			<a class='btn' href=<%=`/${username}/personal/?page=${page-1}` %> >Previous Page</a>
+			<% } %>
+				<a class='btn' href=<%=`/${username}/personal/?page=${page+1}` %> >Next Page</a>
 	</div>
 	<main>
-		<%- include('../partials/recommendation_list',{recommendations: data,username:username })%>
+		<%- include('../partials/recommendation_list',{recommendations: data,username:username,depth:'../../' })%>
 	</main>
 	<div>
-		<a class='btn' href=<%=`/${username}/personal/?page=${page-1}` %> >Previous Page</a>
-		<a class='btn' href=<%=`/${username}/personal/?page=${page+1}` %> >Next Page</a>
+		<% if (page !==0) { %>
+			<a class='btn' href=<%=`/${username}/personal/?page=${page-1}` %> >Previous Page</a>
+			<% } %>
+				<a class='btn' href=<%=`/${username}/personal/?page=${page+1}` %> >Next Page</a>
 	</div>
 </body>
 

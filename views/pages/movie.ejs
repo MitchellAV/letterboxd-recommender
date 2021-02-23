@@ -13,15 +13,19 @@
 		<%= search%>
 	</h1>
 	<div>
-		<a class='btn' href=<%=`/movie/${id}?page=${page-1}` %> >Previous Page</a>
-		<a class='btn' href=<%=`/movie/${id}?page=${page+1}` %> >Next Page</a>
+		<% if (page !==0) { %>
+			<a class='btn' href=<%=`/movie/${id}?page=${page-1}` %> >Previous Page</a>
+			<% } %>
+				<a class='btn' href=<%=`/movie/${id}?page=${page+1}` %> >Next Page</a>
 	</div>
 	<main>
-		<%- include('../partials/recommendation_list',{recommendations: data })%>
+		<%- include('../partials/recommendation_list',{recommendations: data ,depth:'../'})%>
 	</main>
 	<div>
-		<a class='btn' href=<%=`/movie/${id}?page=${page-1}` %> >Previous Page</a>
-		<a class='btn' href=<%=`/movie/${id}?page=${page+1}` %> >Next Page</a>
+		<% if (page !==0) { %>
+			<a class='btn' href=<%=`/movie/${id}?page=${page-1}` %> >Previous Page</a>
+			<% } %>
+				<a class='btn' href=<%=`/movie/${id}?page=${page+1}` %> >Next Page</a>
 	</div>
 </body>
 

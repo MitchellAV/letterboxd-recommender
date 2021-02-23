@@ -1,13 +1,22 @@
 <% recommendations.forEach(book=> { const {_id,title,overview,vote_count, vote_average,crew,
 	release_date,production_companies,production_countries, runtime,keywords,adult, revenue,genres, original_title,
-	original_language, spoken_languages,cast,tags,score,imdb_id,budget,maxTag,user_rating,screenplay,dp,writers}= book
-	%> <article class="book">
+	original_language, spoken_languages,cast,tags,score,imdb_id,budget,maxTag,userRating,screenplay,dp,writers}= book %>
+	<article class="book">
 		<h2 class="book-title">
 			<%= title %>
 		</h2>
 		<div class="info">
-			<img src='../thumbnails/<%=_id %>-thumb.jpg' class=" project-img" loading='lazy' alt="<%= _id%>" />
+			<img src='<%=depth%>thumbnails/<%=_id %>-thumb.jpg' class=" project-img" loading='lazy' alt="<%= _id%>" />
 			<div>
+				<p><b>Score:</b>
+					<%= score.toFixed(3) %>
+				</p>
+				<p><b>Max Tag:</b>
+					<%= maxTag%>
+				</p>
+				<p><b>User Rating:</b>
+					<%= userRating %>
+				</p>
 				<p><b>ID:</b>
 					<a class='tag' href="/movie/<%=_id%>">
 						<%= _id%>
@@ -29,9 +38,6 @@
 				</p>
 				<p><b>Release Date:</b>
 					<%= release_date %>
-				</p>
-				<p><b>Score:</b>
-					<%= score.toFixed(3) %>
 				</p>
 				<p><b>Summary:</b>
 					<%= overview %>

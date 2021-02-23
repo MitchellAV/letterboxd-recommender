@@ -1,7 +1,12 @@
 * {
 	box-sizing: border-box;
+	color: #e8ebed;
 }
-
+html {
+	background-color: #191e23;
+	display: flex;
+	flex-direction: row;
+}
 main {
 	display: flex;
 	flex-direction: column;
@@ -21,16 +26,19 @@ img {
 
 .tag {
 	margin: 0.2rem;
+	padding: 0.1rem 0.3rem;
 	list-style-type: none;
-	background-color: burlywood;
-	color: black;
+	background-color: #283038;
+
+	color: #99aabb;
 	text-decoration: none;
 }
 
-.button {
+.btn {
 	margin-top: 1rem;
 
-	background-color: burlywood; /* Green */
+	background-color: #283038; /* Green */
+
 	border: none;
 	color: white;
 	padding: 15px 32px;
@@ -43,7 +51,8 @@ img {
 article {
 	margin: 0.5rem;
 	padding: 1.5rem;
-	background-color: lightsteelblue;
+	/* border: 1px solid darken(#e8ebed, 10%);
+	border-radius: 10px; */
 }
 
 .tags {
@@ -62,7 +71,7 @@ h2 {
 	p {
 		margin-left: 1.5rem;
 	}
-	.button {
+	.btn {
 		margin-top: 1rem;
 	}
 	.info {
