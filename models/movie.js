@@ -7,7 +7,8 @@ const hasOverview = (str) => {
 
 const scoreSchema = new Schema({
 	_id: {
-		type: String
+		type: String,
+		unique: true
 	},
 	score: {
 		type: Number,

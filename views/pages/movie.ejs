@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="../style.css">
+	<title>Recommendations</title>
+</head>
+
+<body>
+	<h1>
+		<%= search%>
+	</h1>
+	<div>
+		<a class='btn' href=<%=`/movie/${id}?page=${page-1}` %> >Previous Page</a>
+		<a class='btn' href=<%=`/movie/${id}?page=${page+1}` %> >Next Page</a>
+	</div>
+	<main>
+		<%- include('../partials/recommendation_list',{recommendations: data })%>
+	</main>
+	<div>
+		<a class='btn' href=<%=`/movie/${id}?page=${page-1}` %> >Previous Page</a>
+		<a class='btn' href=<%=`/movie/${id}?page=${page+1}` %> >Next Page</a>
+	</div>
+</body>
+
+</html>

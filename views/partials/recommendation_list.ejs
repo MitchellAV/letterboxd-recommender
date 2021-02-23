@@ -9,7 +9,7 @@
 			<img src='../thumbnails/<%=_id %>-thumb.jpg' class=" project-img" loading='lazy' alt="<%= _id%>" />
 			<div>
 				<p><b>ID:</b>
-					<a class='tag' href="/movies/<%=_id%>">
+					<a class='tag' href="/movie/<%=_id%>">
 						<%= _id%>
 					</a>
 				</p>
@@ -23,6 +23,9 @@
 				</p>
 				<p><b>Avg. Rating:</b>
 					<%= vote_average %>
+				</p>
+				<p><b># of Ratings:</b>
+					<%= vote_count %>
 				</p>
 				<p><b>Release Date:</b>
 					<%= release_date %>

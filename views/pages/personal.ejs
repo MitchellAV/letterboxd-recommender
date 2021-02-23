@@ -13,15 +13,15 @@
 		<%= search%>
 	</h1>
 	<div>
-		<a class='btn' href=<%=`/${username}?page=${page-1}` %> >Previous Page</a>
-		<a class='btn' href=<%=`/${username}?page=${page+1}` %> >Next Page</a>
+		<a class='btn' href=<%=`/${username}/personal/?page=${page-1}` %> >Previous Page</a>
+		<a class='btn' href=<%=`/${username}/personal/?page=${page+1}` %> >Next Page</a>
 	</div>
 	<main>
 		<%- include('../partials/recommendation_list',{recommendations: data,username:username })%>
 	</main>
 	<div>
-		<a class='btn' href=<%=`/${username}?page=${page-1}` %> >Previous Page</a>
-		<a class='btn' href=<%=`/${username}?page=${page+1}` %> >Next Page</a>
+		<a class='btn' href=<%=`/${username}/personal/?page=${page-1}` %> >Previous Page</a>
+		<a class='btn' href=<%=`/${username}/personal/?page=${page+1}` %> >Next Page</a>
 	</div>
 </body>
 
