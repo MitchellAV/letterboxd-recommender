@@ -307,7 +307,7 @@ router.get("/:username/personal", async (req, res) => {
 				}
 			},
 			{
-				$sort: { "order.score": -1 }
+				$sort: { "score.userRating": -1, "score.score": -1 }
 			},
 			{
 				$skip: page * num_per_page
@@ -632,23 +632,23 @@ router.get("/:username/update", async (req, res) => {
 	// 	console.log(err);
 	// 	return res.redirect(`/${username}/letterboxd`);
 	// }
-	try {
-		await Movie.updateMany(
-			{},
-			{
-				$addToSet: {
-					score: {
-						_id: username,
-						score: 0,
-						maxTag: null,
-						userRating: null
-					}
-				}
-			}
-		);
-	} catch (err) {
-		console.log(err);
-	}
+	// try {
+	// 	await Movie.updateMany(
+	// 		{},
+	// 		{
+	// 			$addToSet: {
+	// 				score: {
+	// 					_id: username,
+	// 					score: 0,
+	// 					maxTag: null,
+	// 					userRating: null
+	// 				}
+	// 			}
+	// 		}
+	// 	);
+	// } catch (err) {
+	// 	console.log(err);
+	// }
 
 	if (usermovies === null && username !== "") {
 		const newUser = {
@@ -773,7 +773,7 @@ router.get("/:username/update", async (req, res) => {
 	// tags = tags.sort((a, b) => a.idf - b.idf);
 
 	const movies = req.app.get("MOVIES");
-	tags = tags.filter((tag) => (tag.count / movies.length) * 100 <= 3);
+	tags = tags.filter((tag) => (tag.count / movies.length) * 100 <= 1);
 	tags = tags.filter((tag) => (tag.count / movies.length) * 100 >= 0.5);
 	tags = tags.map((tag) => tag._id);
 
@@ -895,10 +895,7 @@ router.get("/:username/update", async (req, res) => {
 		});
 		let { score, maxIndex } = cosine_similarity(search_vector, movieVector);
 		recommendedMovies.push({ _id: movie._id, score: score });
-		await Movie.updateOne(
-			{ _id: movie._id, "score._id": username },
-			{ "score.$.score": score, "score.$.maxTag": tags[maxIndex] }
-		);
+
 		if (i % 1000 == 0) {
 			console.log(`${i}/${movies.length}`);
 		}
@@ -907,6 +904,95 @@ router.get("/:username/update", async (req, res) => {
 		{ _id: username },
 		{ $set: { recommended: recommendedMovies } }
 	);
+	await Movie.aggregate([
+		{
+			$match: {
+				$expr: {
+					$and: [
+						{
+							$in: [username, "$score._id"]
+						}
+					]
+				}
+			}
+		},
+		{
+			$addFields: {
+				score: {
+					$filter: {
+						input: "$score",
+						as: "el",
+						cond: {
+							$eq: ["$$el._id", username]
+						}
+					}
+				}
+			}
+		},
+		{
+			$set: {
+				score: {
+					$arrayElemAt: ["$score", 0]
+				}
+			}
+		},
+		{
+			$lookup: {
+				from: "users",
+				let: {
+					movie_id: "$_id",
+					user_id: "$score._id"
+				},
+				pipeline: [
+					{
+						$match: {
+							$expr: {
+								$eq: ["$$user_id", "$_id"]
+							}
+						}
+					},
+					{
+						$unwind: {
+							path: "$recommended"
+						}
+					},
+					{
+						$match: {
+							$expr: {
+								$eq: ["$$movie_id", "$recommended._id"]
+							}
+						}
+					},
+					{
+						$project: {
+							"recommended.score": 1
+						}
+					},
+					{
+						$set: {
+							score: "$recommended.score"
+						}
+					},
+					{
+						$unset: ["recommended"]
+					}
+				],
+				as: "score.score"
+			}
+		},
+		{
+			$set: {
+				"score.score": {
+					$arrayElemAt: ["$score.score", 0]
+				}
+			}
+		},
+		{
+			$set: {
+				"score.score": "$score.score.score"
+			}
+		}
+	]);
 	recommendedMovies = recommendedMovies.sort((a, b) => b.score - a.score);
 	res.redirect(`/${username}`);
 	// movieVector = movieVector.toArray();
