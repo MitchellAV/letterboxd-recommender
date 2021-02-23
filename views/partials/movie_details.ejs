@@ -1,13 +1,8 @@
 <% recommendations.forEach(book=> { const {_id,title,overview,vote_count, vote_average,crew,
 	release_date,production_companies,production_countries, runtime,keywords,adult, revenue,genres, original_title,
-	original_language, spoken_languages,cast,tags,score,imdb_id,budget,maxTag,user_rating,screenplay,dp,writers}= book
-	%> <p><b>Adult:</b>
+	original_language, spoken_languages,cast,tags,score,imdb_id,budget,maxTag,userRating,screenplay,dp,writers}= book %>
+	<p><b>Adult:</b>
 		<%= adult %>
-	</p>
-	<p><b>Max Tag:</b>
-		<a class='tag' href="/<%=username%>/?tag=<%=maxTag%>">
-			<%= maxTag%>
-		</a>
 	</p>
 	<p><b>User Rating:</b>
 		<%= user_rating %>
