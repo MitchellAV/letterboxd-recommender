@@ -1,21 +1,28 @@
-<form id="filter_search" action='/<%= username %>'>
-	<fieldset class="form-items">
-		<div class="form-group">
-			<label for="filter">Filter by Tag</label>
-			<input type="text" autocomplete="off" placeholder="keyword" ame="filter">
-		</div>
-		<div class="form-group">
-			<label for="min_vote_average">Lowest Rating</label>
-			<input type="number" autocomplete="off" placeholder="0" value=0 min=0 max=10 name="min_vote_average">
-		</div>
-		<div class="form-group">
-			<label for="min_vote_count">Lowest # of Votes</label>
-			<input type="number" autocomplete="off" placeholder="0" value=0 min=0 name="min_vote_count">
-		</div>
-		<div class="form-group">
-			<label for="min_runtime">Shortest Runtime</label>
-			<input type="number" autocomplete="off" placeholder="0" min=0 value=0 name="min_runtime">
-		</div>
-	</fieldset>
-	<button class="btn" type="submit">Filter</i></button>
-</form>
+<% const {min_vote_average,filter,min_vote_count, min_runtime}=filterParams %>
+	<form id="filter_search" action='/<%= username %>'>
+		<fieldset class="form-items">
+			<div class="form-group">
+				<label for="filter">Filter by Tag</label>
+				<input type="text" autocomplete="off" placeholder="keyword" value='<%=filter?filter:'' %>'
+					name="filter">
+			</div>
+			<div class="form-group">
+				<label for="min_vote_average">Lowest Rating</label>
+				<input type="number" autocomplete="off" placeholder=<%=min_vote_average %> value='<%=min_vote_average %>
+					' min=0 max=10 name="min_vote_average">
+			</div>
+			<div class="form-group">
+				<label for="min_vote_count">Lowest # of Votes</label>
+				<input type="number" autocomplete="off" placeholder='<%=min_vote_count %>' value=<%=min_vote_count %>
+				min=0 name="min_vote_count">
+			</div>
+			<div class="form-group">
+				<label for="min_runtime">Shortest Runtime</label>
+				<input type="number" autocomplete="off" placeholder='<%=min_runtime %>' min=0 value=<%=min_runtime %>
+				name="min_runtime">
+			</div>
+		</fieldset>
+		<button class="btn" type="submit">Filter</i></button>
+	</form>
+	<% if (condition) { %>
+		<% } %>
