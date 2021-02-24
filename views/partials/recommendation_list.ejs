@@ -42,6 +42,20 @@
 				<p><b>Summary:</b>
 					<%= overview %>
 				</p>
+				<p><b>Directors:</b></p>
+				<div class='tags'>
+					<% crew.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?filter=<%=tag%>">
+							<%= tag%>
+						</a>
+						<%})%>
+				</div>
+				<p><b>Cast:</b></p>
+				<div class='tags'>
+					<% cast.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?filter=<%=tag%>">
+							<%= tag%>
+						</a>
+						<%})%>
+				</div>
 			</div>
 		</div>
 	</article>

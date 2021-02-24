@@ -8,7 +8,8 @@ const movieSchema = new Schema({
 
 const recSchema = new Schema({
 	_id: { type: Number },
-	score: { type: Number, default: 0, min: -1, max: 1 }
+	score: { type: Number, default: 0, min: -1, max: 1 },
+	maxTag: { type: String, default: null }
 });
 
 const userSchema = new Schema(

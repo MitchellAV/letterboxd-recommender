@@ -5,28 +5,19 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="../style.css">
-	<title>Recommendations</title>
+	<%- include('../partials/meta') %>
+		<title>Recommendations</title>
 </head>
 
 <body>
 	<h1>
 		<%= search%>
 	</h1>
-	<div>
-		<% if (page !==0) { %>
-			<a class='btn' href=<%=`/movie/${id}?page=${page-1}` %> >Previous Page</a>
-			<% } %>
-				<a class='btn' href=<%=`/movie/${id}?page=${page+1}` %> >Next Page</a>
-	</div>
-	<main>
-		<%- include('../partials/recommendation_list',{recommendations: data ,depth:'../'})%>
-	</main>
-	<div>
-		<% if (page !==0) { %>
-			<a class='btn' href=<%=`/movie/${id}?page=${page-1}` %> >Previous Page</a>
-			<% } %>
-				<a class='btn' href=<%=`/movie/${id}?page=${page+1}` %> >Next Page</a>
-	</div>
+	<% include ('../partials/pagination',{page:page,queryString:queryString,username:username}) %>
+		<main>
+			<%- include('../partials/recommendation_list',{recommendations: data ,depth:'../'})%>
+		</main>
+		<% include ('../partials/pagination',{page:page,queryString:queryString,username:username}) %>
 </body>
 
 </html>
