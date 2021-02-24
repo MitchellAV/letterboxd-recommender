@@ -347,7 +347,14 @@ router.get("/:username/personal", async (req, res) => {
 		search: filter,
 		username: username,
 		page: page,
-		queryString: queryString
+		queryString: queryString,
+		filterParams: {
+			filter,
+			min_vote_count,
+			min_vote_average,
+			min_runtime,
+			num_per_page
+		}
 	});
 });
 
@@ -409,7 +416,7 @@ router.get("/:username", async (req, res) => {
 									$in: [username, "$score._id"]
 								},
 								{
-									$in: [filter, "$filter"]
+									$in: [filter.toLowerCase(), "$filter"]
 								},
 								{
 									$gte: ["$vote_count", min_vote_count]
@@ -648,7 +655,14 @@ router.get("/:username", async (req, res) => {
 		search: filter,
 		username: username,
 		page: page,
-		queryString: queryString
+		queryString: queryString,
+		filterParams: {
+			filter,
+			min_vote_count,
+			min_vote_average,
+			min_runtime,
+			num_per_page
+		}
 	});
 });
 router.get("/:username/update", async (req, res) => {

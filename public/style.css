@@ -37,6 +37,7 @@ p {
 #menu {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	list-style-type: none;
 	background-color: #14181c;
 	padding: 0 2rem;

@@ -8,54 +8,70 @@
 		<div class="info">
 			<img src='<%=depth%>thumbnails/<%=_id %>-thumb.jpg' class=" project-img" loading='lazy' alt="<%= _id%>" />
 			<div>
-				<p><b>Score:</b>
-					<%= score.toFixed(3) %>
-				</p>
-				<p><b>Max Tag:</b>
-					<%= maxTag%>
-				</p>
-				<p><b>User Rating:</b>
-					<%= userRating %>
-				</p>
-				<p><b>ID:</b>
-					<a class='tag' href="/movie/<%=_id%>">
-						<%= _id%>
-					</a>
-				</p>
-				<p><b>Original Title:</b>
-					<%= original_title %>
-				</p>
-				<p><b>IMDB:</b>
-					<a class='tag' target="_blank" href="https://www.imdb.com/title/<%=imdb_id  %> ">
-						<%= imdb_id%>
-					</a>
-				</p>
-				<p><b>Avg. Rating:</b>
-					<%= vote_average %>
-				</p>
-				<p><b># of Ratings:</b>
-					<%= vote_count %>
-				</p>
-				<p><b>Release Date:</b>
-					<%= release_date %>
-				</p>
-				<p><b>Summary:</b>
-					<%= overview %>
-				</p>
-				<p><b>Directors:</b></p>
-				<div class='tags'>
-					<% crew.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?filter=<%=tag%>">
-							<%= tag%>
-						</a>
-						<%})%>
-				</div>
-				<p><b>Cast:</b></p>
-				<div class='tags'>
-					<% cast.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?filter=<%=tag%>">
-							<%= tag%>
-						</a>
-						<%})%>
-				</div>
+				<% if (!maxTag) { %>
+					<p><b>Max Tag:</b>
+						<%= maxTag%>
+					</p>
+					<% } %>
+						<% if (!userRating) { %>
+							<p><b>User Rating:</b>
+								<%= userRating %>
+							</p>
+							<% } %>
+								<p><b>ID:</b>
+									<a class='tag' href="/movie/<%=_id%>">
+										<%= _id%>
+									</a>
+								</p>
+								<p><b>Original Title:</b>
+									<%= original_title %>
+								</p>
+								<p><b>IMDB:</b>
+									<a class='tag' target="_blank" href="https://www.imdb.com/title/<%=imdb_id  %> ">
+										<%= imdb_id%>
+									</a>
+								</p>
+								<p><b>Avg. Rating:</b>
+									<%= vote_average %>
+								</p>
+								<p><b># of Ratings:</b>
+									<%= vote_count %>
+								</p>
+								<p><b>Release Date:</b>
+									<%= release_date %>
+								</p>
+								<p><b>Summary:</b>
+									<%= overview %>
+								</p>
+								<% if (crew.length !==0) { %>
+									<p><b>Crew:</b></p>
+									<div class='tags'>
+										<% crew.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?filter=<%=tag%>">
+												<%= tag%>
+											</a>
+											<%})%>
+									</div>
+									<% } %>
+										<% if (cast.length!==0) { %>
+											<p><b>Cast:</b></p>
+											<div class='tags'>
+												<% cast.forEach(tag=> {%> <a class='tag'
+														href="/<%=username%>/?filter=<%=tag%>">
+														<%= tag%>
+													</a>
+													<%})%>
+											</div>
+											<% } %>
+												<% if (keywords.length !==0) { %>
+													<p><b>Keywords:</b></p>
+													<div class='tags'>
+														<% keywords.forEach(tag=> {%> <a class='tag'
+																href="/<%=username%>/?filter=<%=tag%>">
+																<%= tag%>
+															</a>
+															<%})%>
+													</div>
+													<% } %>
 			</div>
 		</div>
 	</article>
