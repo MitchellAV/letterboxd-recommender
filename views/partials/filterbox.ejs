@@ -22,17 +22,17 @@
 			<div class="form-group">
 				<label for="min_vote_average">Min Rating</label>
 				<input type="number" autocomplete="off" step=".5" placeholder=<%=min_vote_average %> value=
-				<%=min_vote_average %> min=0 max=10 name="min_vote_average">
+				<%=min_vote_average %> min=.5 max=10 name="min_vote_average">
 			</div>
 			<div class="form-group">
 				<label for="min_vote_count">Min # Votes</label>
-				<input type="number" autocomplete="off" step="100" placeholder=<%=min_vote_count %> value=
-				<%=min_vote_count %> min=0 name="min_vote_count">
+				<input type="number" autocomplete="off" placeholder=<%=min_vote_count %> value= <%=min_vote_count %>
+					min=1 name="min_vote_count">
 			</div>
 			<div class="form-group">
 				<label for="min_runtime">Min Runtime (mins)</label>
-				<input type="number" autocomplete="off" placeholder='<%=min_runtime %>' min=0 step="10"
-					value=<%=min_runtime %> name="min_runtime">
+				<input type="number" autocomplete="off" placeholder='<%=min_runtime %>' min=1 value=<%=min_runtime %>
+				name="min_runtime">
 			</div>
 			<div class="form-group">
 				<label for="order">Order</label>

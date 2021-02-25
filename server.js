@@ -332,5 +332,11 @@ app.use(express.json());
 // set the view engine to ejs
 app.set("view engine", "ejs");
 
-app.use("/", require("./routes/recommender"));
-app.use("/", require("./routes/letterboxd"));
+app.use("/user", require("./routes/username"));
+app.use("/api", require("./routes/api"));
+app.get("/", (req, res) => {
+	res.render("pages/index");
+});
+app.get("*", (req, res) => {
+	res.render("pages/404");
+});

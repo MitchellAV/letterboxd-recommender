@@ -4,6 +4,7 @@ const fs = require("fs").promises;
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
 const getLetterboxdUserMovies = async (user) => {
+	let userfound = false;
 	try {
 		const browser = await puppeteer.launch({
 			headless: false
@@ -70,25 +71,19 @@ const getLetterboxdUserMovies = async (user) => {
 				finished = true;
 			}
 		}
-		let num_of_movies = 0;
-		let sum_rating = 0;
-		json.movies.forEach((movie) => {
-			if (movie.rating !== null) {
-				num_of_movies++;
-				sum_rating += movie.rating;
-			}
-		});
-		let avg_rating = sum_rating / num_of_movies;
-		json.avg_rating = avg_rating;
-		await fs.writeFile(
-			`./json/users/${user}-movies.json`,
-			JSON.stringify(json)
-		);
 		await browser.close();
+		if (json.movies.length !== 0) {
+			userfound = true;
+			await fs.writeFile(
+				`./json/users/${user}-movies.json`,
+				JSON.stringify(json)
+			);
+		}
 	} catch (err) {
 		console.error(err);
 	}
 	console.log("Finished getting movies from user.");
+	return userfound;
 };
 
 module.exports = { getLetterboxdUserMovies };

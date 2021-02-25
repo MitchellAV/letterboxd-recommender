@@ -6,7 +6,9 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="../style.css">
 	<%- include('../partials/meta') %>
-		<title>Recommendations</title>
+		<title>
+			<%= username %>'s Recommended Movies
+		</title>
 </head>
 
 <body>
@@ -20,10 +22,10 @@
 					<%- include ('../partials/filterbox',{ filterParams:filterParams,url:url,personal:false}) %>
 						<main>
 							<%- include('../partials/recommendation_list',{recommendations:
-								data,username:username,depth:'../',queryString:queryString,url:url })%>
+								data,depth:'../',queryString:queryString,url:url })%>
 						</main>
-						<%- include ('../partials/pagination',{page:page,queryString:queryString,username:username}) %>
-							<script src="./index.js"></script>
+						<%- include ('../partials/pagination',{page:page,queryString:queryString,url:url}) %>
+							<script src="../index.js"></script>
 </body>
 
 </html>

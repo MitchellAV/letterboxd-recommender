@@ -1,15 +1,15 @@
 <nav>
 	<ul id="menu">
 		<li class="logo nav-item">
-			<a class="logo" href="/"><img src="../logos/letterboxd-logo.svg" alt="Kiwi standing on oval"></a>
+			<a class="logo" href="/"><img src="../../logos/letterboxd-logo.svg" alt="Kiwi standing on oval"></a>
 		</li>
 		<li class="toggle"><a href="#menu"><i class="icon fa fa-bars"></i></a></li>
 		<% if (username) { %>
-			<li class="nav-item"><a class="nav-link" href="/<%= username %>">
+			<li class="nav-item"><a class="nav-link" href="/user/<%= username %>">
 					<%=username%>
 				</a></li>
-			<li class="nav-item"><a class="nav-link" href="/<%= username %>/personal">Films</a></li>
-			<li class="nav-item"><a class="nav-link" href="/<%= username %>/personal">Friends</a></li>
+			<li class="nav-item"><a class="nav-link" href="/user/<%= username %>/personal">Films</a></li>
+			<li class="nav-item"><a class="nav-link" href="/user/<%= username %>/personal">Friends</a></li>
 			<li class="nav-item"><a class="nav-link" href="https://letterboxd.com/<%= username %>">Account</a></li>
 			<% } %>
 				<li class="searchbar">
