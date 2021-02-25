@@ -1,28 +1,53 @@
-<% const {min_vote_average,filter,min_vote_count, min_runtime}=filterParams %>
-	<form id="filter_search" action='/<%= username %>'>
+<% const {min_vote_average,filter,min_vote_count, min_runtime,num_per_page,sort_type,order}=filterParams %>
+	<form id="filter_search" action='<%= url %>'>
+		<h4>Filter Results</h4>
 		<fieldset class="form-items">
 			<div class="form-group">
-				<label for="filter">Filter by Tag</label>
-				<input type="text" autocomplete="off" placeholder="keyword" value='<%=filter?filter:'' %>'
+				<label for="filter">Tag</label>
+				<input type="text" autocomplete="off" placeholder='e.g. "coming of age"' value='<%=filter?filter:'' %>'
 					name="filter">
 			</div>
 			<div class="form-group">
-				<label for="min_vote_average">Lowest Rating</label>
-				<input type="number" autocomplete="off" placeholder=<%=min_vote_average %> value='<%=min_vote_average %>
-					' min=0 max=10 name="min_vote_average">
+				<label for="sort_type">Sort by</label>
+				<select name="sort_type" target=<%=sort_type %>> <option value="score.score">Recommended</option>
+					<option value="runtime">Runtime</option>
+					<option value="vote_average">Rating</option>
+					<option value="vote_count"># of Votes</option>
+					<option value="release_date">Release Date</option>
+					<% if (personal) { %>
+						<option value="score.userRating">User Rating</option>
+						<% } %>
+				</select>
 			</div>
 			<div class="form-group">
-				<label for="min_vote_count">Lowest # of Votes</label>
-				<input type="number" autocomplete="off" placeholder='<%=min_vote_count %>' value=<%=min_vote_count %>
-				min=0 name="min_vote_count">
+				<label for="min_vote_average">Min Rating</label>
+				<input type="number" autocomplete="off" step=".5" placeholder=<%=min_vote_average %> value=
+				<%=min_vote_average %> min=0 max=10 name="min_vote_average">
 			</div>
 			<div class="form-group">
-				<label for="min_runtime">Shortest Runtime</label>
-				<input type="number" autocomplete="off" placeholder='<%=min_runtime %>' min=0 value=<%=min_runtime %>
-				name="min_runtime">
+				<label for="min_vote_count">Min # Votes</label>
+				<input type="number" autocomplete="off" step="100" placeholder=<%=min_vote_count %> value=
+				<%=min_vote_count %> min=0 name="min_vote_count">
 			</div>
+			<div class="form-group">
+				<label for="min_runtime">Min Runtime (mins)</label>
+				<input type="number" autocomplete="off" placeholder='<%=min_runtime %>' min=0 step="10"
+					value=<%=min_runtime %> name="min_runtime">
+			</div>
+			<div class="form-group">
+				<label for="order">Order</label>
+				<select name="order" target=<%=order %>> <option value="-1">Descending</option>
+					<option value="1">Ascending</option>
+				</select>
+			</div>
+			<div class="form-group">
+				<label for="num_per_page">Results per Page</label>
+				<select name="num_per_page" target=<%=num_per_page %>> <option value="25">25</option>
+					<option value="50">50</option>
+					<option value="75">75</option>
+					<option value="100">100</option>
+				</select>
+			</div>
+			<button class=" filter-btn" type="submit">Filter</i></button>
 		</fieldset>
-		<button class="btn" type="submit">Filter</i></button>
 	</form>
-	<% if (condition) { %>
-		<% } %>

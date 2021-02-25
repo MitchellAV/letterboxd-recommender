@@ -10,17 +10,20 @@
 </head>
 
 <body>
-	<h1>
-		<%= search%>
-	</h1>
 	<% if(queryString==='' ){ queryString='?' }else{ queryString +='&' } %>
 		<%- include ('../partials/navbar',{username:username}) %>
-			<%- include ('../partials/filterbox',{username:username,filterParams:filterParams}) %>
-				<main>
-					<%- include('../partials/recommendation_list',{recommendations:
-						data,username:username,depth:'../',queryString:queryString })%>
-				</main>
-				<%- include ('../partials/pagination',{page:page,queryString:queryString,username:username}) %>
+			<% if (search) { %>
+				<h1 class='searchterm'>
+					<%= search%>
+				</h1>
+				<% } %>
+					<%- include ('../partials/filterbox',{ filterParams:filterParams,url:url,personal:false}) %>
+						<main>
+							<%- include('../partials/recommendation_list',{recommendations:
+								data,username:username,depth:'../',queryString:queryString,url:url })%>
+						</main>
+						<%- include ('../partials/pagination',{page:page,queryString:queryString,username:username}) %>
+							<script src="./index.js"></script>
 </body>
 
 </html>

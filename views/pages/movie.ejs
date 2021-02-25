@@ -13,11 +13,13 @@
 	<h1>
 		<%= search%>
 	</h1>
-	<% include ('../partials/pagination',{page:page,queryString:queryString,username:username}) %>
-		<main>
-			<%- include('../partials/recommendation_list',{recommendations: data ,depth:'../'})%>
-		</main>
-		<% include ('../partials/pagination',{page:page,queryString:queryString,username:username}) %>
+	<% include ('../partials/pagination',{page:page,queryString:queryString,username:''}) %>
+		<%- include ('../partials/filterbox',{username:'',filterParams:filterParams}) %>
+			<main>
+				<%- include('../partials/recommendation_list',{recommendations:
+					data,username:'',depth:'../',queryString:queryString })%>
+			</main>
+			<% include ('../partials/pagination',{page:page,queryString:queryString,username:''}) %>
 </body>
 
 </html>

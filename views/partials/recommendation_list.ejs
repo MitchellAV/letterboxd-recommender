@@ -8,12 +8,14 @@
 		<div class="info">
 			<img src='<%=depth%>thumbnails/<%=_id %>-thumb.jpg' class=" project-img" loading='lazy' alt="<%= _id%>" />
 			<div>
-				<% if (!maxTag) { %>
-					<p><b>Max Tag:</b>
-						<%= maxTag%>
+				<% if (maxTag) { %>
+					<p><b>Because you like movies with Tag: </b>
+						<a class='tag' href="<%=url%>?filter=<%=maxTag%>">
+							<%= maxTag%>
+						</a>
 					</p>
 					<% } %>
-						<% if (!userRating) { %>
+						<% if (userRating) { %>
 							<p><b>User Rating:</b>
 								<%= userRating %>
 							</p>
@@ -46,7 +48,7 @@
 								<% if (crew.length !==0) { %>
 									<p><b>Crew:</b></p>
 									<div class='tags'>
-										<% crew.forEach(tag=> {%> <a class='tag' href="/<%=username%>/?filter=<%=tag%>">
+										<% crew.forEach(tag=> {%> <a class='tag' href="<%=url%>?filter=<%=tag%>">
 												<%= tag%>
 											</a>
 											<%})%>
@@ -56,7 +58,7 @@
 											<p><b>Cast:</b></p>
 											<div class='tags'>
 												<% cast.forEach(tag=> {%> <a class='tag'
-														href="/<%=username%>/?filter=<%=tag%>">
+														href="<%=url%>?filter=<%=tag%>">
 														<%= tag%>
 													</a>
 													<%})%>
@@ -66,12 +68,22 @@
 													<p><b>Keywords:</b></p>
 													<div class='tags'>
 														<% keywords.forEach(tag=> {%> <a class='tag'
-																href="/<%=username%>/?filter=<%=tag%>">
+																href="<%=url%>?filter=<%=tag%>">
 																<%= tag%>
 															</a>
 															<%})%>
 													</div>
 													<% } %>
+														<% if (genres.length !==0) { %>
+															<p><b>Genres:</b></p>
+															<div class='tags'>
+																<% genres.forEach(tag=> {%> <a class='tag'
+																		href="<%=url%>?filter=<%=tag%>">
+																		<%= tag%>
+																	</a>
+																	<%})%>
+															</div>
+															<% } %>
 			</div>
 		</div>
 	</article>

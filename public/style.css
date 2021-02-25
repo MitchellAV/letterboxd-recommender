@@ -13,6 +13,7 @@ main {
 	display: flex;
 	flex-direction: column;
 	background-image: linear-gradient(#1f262d, #14181c);
+	padding: 1rem 5rem;
 }
 h1 {
 	text-transform: capitalize;
@@ -113,12 +114,29 @@ img {
 	font-size: 16px;
 	width: 100%;
 }
+
+.filter-btn {
+	color: white;
+	width: 100px;
+	margin-top: 1rem;
+	padding: 0.4rem 0.6rem;
+	text-align: center;
+	display: inline-block;
+	font-size: 1rem;
+	background-color: #00b020;
+	border-radius: 10px;
+}
 article {
 	margin: 0.5rem;
 	padding: 1.5rem;
-
-	/* border: 1px solid darken(#e8ebed, 10%);
+	/* border: 5px outset #e8ebed;
 	border-radius: 10px; */
+	box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.2);
+}
+.searchterm {
+	text-align: left;
+	margin: 1rem;
+	padding-left: 5rem;
 }
 
 .tags {
@@ -138,10 +156,14 @@ fieldset {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
+
 	padding: 0.5rem;
 }
 
-#filter_search input {
+#filter_search input,
+select,
+option {
+	max-width: 200px;
 	border-radius: 10px;
 	padding: 0.2rem 0.5rem;
 	text-align: left;
@@ -162,6 +184,8 @@ fieldset {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
+	margin: 0.5rem;
+	/* min-width: 150px; */
 }
 
 /* Medium devices (landscape tablets, 768px and up) */
