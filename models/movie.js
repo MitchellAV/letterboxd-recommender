@@ -7,23 +7,22 @@ const hasOverview = (str) => {
 
 const scoreSchema = new Schema({
 	_id: {
-		type: String,
-		unique: true
+		type: String
 	},
 	score: {
-		type: Number,
-		required: true
+		type: Number
 	},
 	maxTag: {
-		type: String,
-		default: null
+		type: String
 	},
-	userRating: { type: Number, default: null }
+	userRating: { type: Number }
 });
 
 const movieSchema = new Schema(
 	{
 		_id: Number,
+		letterboxd_id: { type: Number, default: null },
+		letterboxd_url: { type: String, default: null },
 		title: { type: String, required: true },
 		overview: {
 			type: String,

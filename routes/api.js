@@ -4,7 +4,10 @@ const router = express.Router();
 const math = require("mathjs");
 const Movie = require("../models/movie");
 const User = require("../models/user");
-const { getLetterboxdUserMovies } = require("../getletterboxd");
+const {
+	getLetterboxdUserMovies,
+	isRealLetterboxdUser
+} = require("../getletterboxd");
 
 router.post(
 	"/create_user",
@@ -33,24 +36,86 @@ router.post(
 			console.log(errors);
 			data.msg = "Please fix the following fields:";
 			data.errors = errors.array();
-			return res.status(400).json(data);
+			return res.redirect("/");
 		} else {
 			const username = req.body.username;
 			let usermovies;
 			try {
 				usermovies = await User.findById(username).lean();
 			} catch (err) {
-				console.log("no user exists");
-				await getLetterboxdUserMovies(username);
+				console.log(err);
+			}
+			// Does user Exist in Database
+			if (!usermovies) {
+				// If user does not exist in database then check if username is real letterboxd user
+				// if user is real get movies else dont
+				let userExists = await isRealLetterboxdUser(username);
+
+				// If check if user is real
+				if (userExists) {
+					const movieArray = await getLetterboxdUserMovies(username);
+					// user is real
+					const newUser = {
+						_id: username,
+						movies: [],
+						watchList: [],
+						following: []
+					};
+					if (movieArray.length !== 0) {
+						let ratings = movieArray.map((movie) => movie.rating);
+						ratings = ratings.filter((rating) => rating !== null);
+						let avg = math.mean(ratings) || 1;
+						movieArray.forEach((movie) => {
+							const movieObj = {
+								_id: movie._id,
+								rating: movie.rating || avg
+							};
+							if (!isNan(movieObj._id)) {
+								newUser.movies.push(movieObj);
+							}
+						});
+					}
+					const userToSave = new User(newUser);
+					try {
+						// save user to database users collection
+						await userToSave.save();
+					} catch (err) {
+						console.error("Unable to save user to database");
+					}
+				} else {
+					console.log("user does not exist");
+					return res.redirect("/");
+				}
+			} else {
+				const movieArray = await getLetterboxdUserMovies(username);
+				// user is real
+				const newUser = {
+					_id: username,
+					movies: [],
+					watchList: [],
+					following: []
+				};
+				let ratings = movieArray.map((movie) => movie.rating);
+				ratings = ratings.filter((rating) => rating !== null);
+				let avg = math.mean(ratings);
+				movieArray.forEach((movie) => {
+					const movieObj = {
+						_id: movie._id,
+						rating: movie.rating || avg
+					};
+					if (!isNan(movieObj._id)) {
+						newUser.movies.push(movieObj);
+					}
+				});
+				try {
+					// add users movies to user in database
+					await User.updateOne({ _id: username }, newUser);
+				} catch (err) {
+					console.error("Unable to save user to database");
+				}
 			}
 			usermovies = await User.findById(username).lean();
 
-			// try {
-			// 	usermovies = require(`../json/users/${username}-movies.json`).movies;
-			// } catch (err) {
-			// 	console.log(err);
-			// 	return res.redirect(`/${username}/letterboxd`);
-			// }
 			try {
 				await Movie.updateMany(
 					{ "score._id": { $not: { $eq: username } } },
@@ -67,45 +132,6 @@ router.post(
 				);
 			} catch (err) {
 				console.log(err);
-			}
-
-			if (usermovies === null && username !== "") {
-				const newUser = {
-					_id: username,
-					movies: [],
-					recommended: []
-				};
-				const userToSave = new User(newUser);
-				try {
-					await userToSave.save();
-
-					return res.redirect(`/${username}/letterboxd`);
-				} catch (err) {
-					console.error("Unable to save user to database");
-					return res.status(500).send(err);
-				}
-			}
-
-			const newUser = {
-				_id: username,
-				movies: [],
-				recommended: []
-			};
-			let ratings = usermovies.map((movie) => movie.rating);
-			ratings = ratings.filter((rating) => rating !== null);
-			let avg = math.mean(ratings);
-			usermovies.forEach((movie) => {
-				const movieObj = {
-					_id: parseInt(movie.id),
-					rating: movie.rating || avg
-				};
-				if (!isNaN(movieObj._id)) {
-					newUser.movies.push(movieObj);
-				}
-			});
-			if (usermovies) {
-				await User.updateOne({ _id: username }, newUser);
-			} else {
 			}
 
 			let tags = await User.aggregate([
@@ -422,6 +448,23 @@ router.post(
 			res.redirect(`/user/${username}`);
 			// movieVector = movieVector.toArray();
 		}
+	}
+);
+router.post(
+	"/update_user",
+	[
+		body("username", "Please enter your letterboxd username.")
+			.trim()
+			.isLength({ min: 1 })
+			.escape(),
+
+		body(
+			"accuracy",
+			"Please select how accurate you want your recommendations to be."
+		).isIn(["high", "med", "low"])
+	],
+	async (req, res) => {
+		// Is user
 	}
 );
 module.exports = router;

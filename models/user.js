@@ -3,20 +3,21 @@ const Schema = mongoose.Schema;
 
 const movieSchema = new Schema({
 	_id: { type: Number },
-	rating: { type: Number, default: 1, min: 1 }
+	rating: { type: Number, min: 1, max: 10 }
 });
-
-const recSchema = new Schema({
-	_id: { type: Number },
-	score: { type: Number, default: 0, min: -1, max: 1 },
-	maxTag: { type: String, default: null }
+const watchListSchema = new Schema({
+	_id: { type: Number }
+});
+const followingSchema = new Schema({
+	_id: { type: String }
 });
 
 const userSchema = new Schema(
 	{
 		_id: { type: String, required: true },
 		movies: [movieSchema],
-		recommended: [recSchema]
+		watchList: [watchListSchema],
+		following: [followingSchema]
 	},
 	{ timestamps: true }
 );

@@ -1280,6 +1280,7 @@ const cleanDatabase = (input_array) => {
 			directors: [],
 			producers: [],
 			writers: [],
+			filter: [],
 			budget,
 			adult,
 			thumbnail_url: poster_path
@@ -1289,7 +1290,7 @@ const cleanDatabase = (input_array) => {
 				? `https://image.tmdb.org/t/p/original${backdrop_path}`
 				: "",
 			tags: [],
-			score: 0
+			score: {}
 		};
 		let words = overview
 			.toLowerCase()

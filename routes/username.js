@@ -85,13 +85,6 @@ if (!overwrite) {
 	// 	.then((result) => console.log("saved movie"))
 	// 	.catch((err) => console.error(err));
 } else {
-	// filtered_database = [...get_database(0, Infinity, "./json/database/")];
-	// let filtered_database_keywords = [
-	// 	...get_database(0, Infinity, "./json/keywords/")
-	// ];
-	// let filtered_database_credits = [
-	// 	...get_database(0, Infinity, "./json/credits/")
-	// ];
 	// filtered_database = cleanDatabase(filtered_database);
 	// console.log("created filtered database");
 	// filtered_database.forEach((movie) => {

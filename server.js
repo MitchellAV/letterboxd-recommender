@@ -1,28 +1,24 @@
 const express = require("express");
 const path = require("path");
 var cors = require("cors");
+const dotenv = require("dotenv").config();
 const mongoose = require("mongoose");
 const Movie = require("./models/movie");
 const Tag = require("./models/tag");
 const User = require("./models/user");
 
-const { get_database } = require("./recommendation_engine.js");
-const {
-	cleanDatabase,
-	cleanDatabaseKeywords,
-	cleanDatabaseCredits
-} = require("./filter");
 const app = express();
 
 mongoose
-	.connect("mongodb://localhost:27017/movies-db", {
+	.connect(process.env.MONGODB_URI, {
 		useNewUrlParser: true,
 		useUnifiedTopology: true,
 		useFindAndModify: false,
 		useCreateIndex: true
 	})
 	.then(async (result) => {
-		console.log("Sucessfully connected to database movies-db");
+		console.log("Sucessfully Connected to MongoDB Atlas Database");
+
 		// await Movie.updateMany({}, [
 		// 	{
 		// 		$set: {
@@ -96,20 +92,11 @@ mongoose
 		// 		]
 		// 	}
 		// ]).allowDiskUse(true);
-		const MOVIES = await Movie.aggregate([
-			{
-				$unset: [
-					"term",
-					"database_avg_rating",
-					"numTags",
-					"createdAt",
-					"updatedAt"
-				]
-			}
-		]).allowDiskUse(true);
-		console.log("Movies loaded");
-		app.set("MOVIES", MOVIES);
-		app.set("MOVIE_COUNT", MOVIES.length);
+
+		// const MOVIES = await Movie.find({});
+		// console.log("Movies loaded");
+		// app.set("MOVIES", MOVIES);
+		// app.set("MOVIE_COUNT", MOVIES.length);
 		app.listen(3000, console.log("Server started on localhost:3000"));
 
 		// await Movie.updateMany({}, [
