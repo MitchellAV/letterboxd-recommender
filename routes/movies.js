@@ -76,7 +76,7 @@ router.get("/:id", async (req, res) => {
 	// 		.filter((tag) => tag !== undefined)
 	// );
 	movie.tags.forEach((tag) => {
-		const index = tagsObj.get(tag._id);
+		const index = tagsObj.get(tag);
 		if (index !== undefined) {
 			// avg_user_movie_rating
 			// let tfidf = tag.idf;
@@ -106,7 +106,7 @@ router.get("/:id", async (req, res) => {
 		// 	avg_tags_idf = 0;
 		// }
 		movie.tags.forEach((tag) => {
-			const index = tagsObj.get(tag);
+			const index = tagsObj.get(tag._id);
 			if (index !== undefined) {
 				// movieavgrating
 				let tfidf = tag.idf;

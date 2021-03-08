@@ -9,7 +9,11 @@ const {
 	isRealLetterboxdUser
 } = require("../getletterboxd");
 const { cosine_similarity } = require("../recommendation_engine.js");
-const tagBlacklist = ["aftercreditsstinger", "duringcreditsstinger"];
+const tagBlacklist = [
+	"aftercreditsstinger",
+	"duringcreditsstinger",
+	"based on novel or book"
+];
 
 router.post(
 	"/create_user",
@@ -41,6 +45,7 @@ router.post(
 			return res.redirect("/");
 		} else {
 			const username = req.body.username;
+			const accuracy = req.body.accuracy;
 			let usermovies;
 			try {
 				usermovies = await User.findById(username).lean();
@@ -136,22 +141,22 @@ router.post(
 				console.log(err);
 			}
 			// try {
-			// 	const num_of_movies = await Movie.countDocuments({});
+			// const num_of_movies = await Movie.countDocuments({});
 			// await Movie.aggregate([
-			// 	// {
-			// 	// 	$set: {
-			// 	// 		tags: {
-			// 	// 			$setUnion: [
-			// 	// 				"$keywords",
-			// 	// 				"$genres",
-			// 	// 				"$cast",
-			// 	// 				"$crew",
-			// 	// 				"$spoken_languages",
-			// 	// 				"$overview_words"
-			// 	// 			]
-			// 	// 		}
-			// 	// 	}
-			// 	// },
+			// 	{
+			// 		$set: {
+			// 			tags: {
+			// 				$setUnion: [
+			// 					"$keywords",
+			// 					"$genres",
+			// 					"$cast",
+			// 					"$crew",
+			// 					"$spoken_languages",
+			// 					"$overview_words"
+			// 				]
+			// 			}
+			// 		}
+			// 	},
 			// 	{
 			// 		$unwind: {
 			// 			path: "$tags"
@@ -189,6 +194,45 @@ router.post(
 			// } catch (err) {
 			// 	console.log(err);
 			// }
+
+			let user_movie_ids = usermovies.movies.map((movie) => movie._id);
+
+			let user_tags = await Movie.aggregate([
+				{
+					$match: {
+						$expr: {
+							$in: ["$_id", user_movie_ids]
+						}
+					}
+				},
+				{
+					$unwind: {
+						path: "$tags"
+					}
+				},
+				{
+					$group: {
+						_id: "$tags",
+						count: {
+							$sum: 1
+						}
+					}
+				},
+				{
+					$set: {
+						idf: {
+							$log10: {
+								$divide: [user_movie_ids.length, "$count"]
+							}
+						}
+					}
+				}
+			]);
+			let userTagMap = new Map();
+
+			user_tags.forEach((tag) => {
+				userTagMap.set(tag._id, tag.idf);
+			});
 
 			let tags = await User.aggregate([
 				{
@@ -268,8 +312,25 @@ router.post(
 
 			const movies = req.app.get("MOVIES");
 			tags = tags.filter((tag) => (tag.count / movies.length) * 100 <= 3);
-			// tags = tags.filter((tag) => tag.count >= 1000);
 			tags = tags.filter((tag) => !tagBlacklist.includes(tag._id));
+			tags = tags.sort((a, b) => b.count - a.count);
+			switch (accuracy) {
+				case "high":
+					break;
+				case "med":
+					tags = tags.filter(
+						(tag) => (tag.count / movies.length) * 100 >= 0.5
+					);
+					break;
+				case "low":
+					tags = tags.filter(
+						(tag) => (tag.count / movies.length) * 100 >= 1
+					);
+					break;
+
+				default:
+					break;
+			}
 
 			tags = tags.map((tag) => tag._id);
 
@@ -322,7 +383,7 @@ router.post(
 					const index = tagsObj.get(tag._id);
 					if (index !== undefined) {
 						// avg_user_movie_rating
-						let tfidf = tag.idf;
+						let tfidf = userTagMap.get(tag._id);
 						let ratingWeight = Math.pow(
 							movie.userRating / avg_user_movie_rating,
 							5
