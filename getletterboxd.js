@@ -36,7 +36,7 @@ const get_movie_info = async (browser, $, el) => {
 	id_found_in_database = id_found_in_database[0];
 	if (!id_found_in_database) {
 		const moviePage = await browser.newPage();
-		const movieUrl = `https://letterboxd.com/${letterboxd_url}`;
+		const movieUrl = `https://letterboxd.com${letterboxd_url}`;
 
 		await moviePage.goto(movieUrl, {
 			waitUntil: "load",

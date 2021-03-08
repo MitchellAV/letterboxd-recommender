@@ -8,7 +8,14 @@ const {
 	cosine_similarity
 } = require("../recommendation_engine.js");
 
-router.get("/movie/:id", async (req, res) => {
+const default_min_vote_count = 100;
+const default_min_vote_average = 6;
+const default_min_runtime = 40;
+const default_num_per_page = 25;
+const default_sort_type = "score.score";
+const default_order = -1;
+
+router.get("/:id", async (req, res) => {
 	const id = req.params.id;
 	const qIndex = req.url.indexOf("?");
 	let queryString;
@@ -34,12 +41,10 @@ router.get("/movie/:id", async (req, res) => {
 	const movie = await Movie.findById(id).lean();
 	const movies = req.app.get("MOVIES");
 
-	let tags = movie.tags.filter(
-		(tag) => (tag.count / movies.length) * 100 <= 10
-	);
+	let tags = movie.tags;
 
-	tags = tags.filter((tag) => !tagBlacklist.includes(tag._id));
-	tags = tags.map((tag) => tag._id);
+	// tags = tags.filter((tag) => !tagBlacklist.includes(tag._id));
+	// tags = tags.map((tag) => tag._id);
 
 	let tagsObj = new Map();
 	tags.forEach((tag, i) => {
@@ -60,23 +65,23 @@ router.get("/movie/:id", async (req, res) => {
 	all_movies_average = all_movies_average[0].average;
 
 	let search_vector = math.matrix(math.zeros([1, tags.length]), "sparse");
-	let avg_tags_idf = math.mean(
-		movie.tags
-			.map((tag) => {
-				const index = tagsObj.get(tag._id);
-				if (index !== undefined) {
-					return tag.idf;
-				}
-			})
-			.filter((tag) => tag !== undefined)
-	);
+	// let avg_tags_idf = math.mean(
+	// 	movie.tags
+	// 		.map((tag) => {
+	// 			const index = tagsObj.get(tag._id);
+	// 			if (index !== undefined) {
+	// 				return tag.idf;
+	// 			}
+	// 		})
+	// 		.filter((tag) => tag !== undefined)
+	// );
 	movie.tags.forEach((tag) => {
 		const index = tagsObj.get(tag._id);
 		if (index !== undefined) {
 			// avg_user_movie_rating
-			let tfidf = tag.idf;
+			// let tfidf = tag.idf;
 
-			search_vector.set([0, index], tfidf);
+			search_vector.set([0, index], 1);
 		}
 	});
 
@@ -85,23 +90,23 @@ router.get("/movie/:id", async (req, res) => {
 		const movie = movies[i];
 
 		let movieVector = math.matrix(math.zeros([1, tags.length]), "sparse");
-		let avg_tags_idf;
-		try {
-			avg_tags_idf = math.mean(
-				movie.tags
-					.map((tag) => {
-						const index = tagsObj.get(tag._id);
-						if (index !== undefined) {
-							return tag.idf;
-						}
-					})
-					.filter((tag) => tag !== undefined)
-			);
-		} catch (err) {
-			avg_tags_idf = 0;
-		}
+		// let avg_tags_idf;
+		// try {
+		// 	avg_tags_idf = math.mean(
+		// 		movie.tags
+		// 			.map((tag) => {
+		// 				const index = tagsObj.get(tag._id);
+		// 				if (index !== undefined) {
+		// 					return tag.idf;
+		// 				}
+		// 			})
+		// 			.filter((tag) => tag !== undefined)
+		// 	);
+		// } catch (err) {
+		// 	avg_tags_idf = 0;
+		// }
 		movie.tags.forEach((tag) => {
-			const index = tagsObj.get(tag._id);
+			const index = tagsObj.get(tag);
 			if (index !== undefined) {
 				// movieavgrating
 				let tfidf = tag.idf;

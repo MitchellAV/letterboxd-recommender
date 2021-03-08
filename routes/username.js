@@ -175,7 +175,6 @@ const filter_tags = (ref_tags, count_books_tag) => {
 	return [ref_tags, count_books_tag];
 };
 
-const tagBlacklist = ["aftercreditsstinger", "duringcreditsstinger"];
 const default_min_vote_count = 100;
 const default_min_vote_average = 6;
 const default_min_runtime = 40;

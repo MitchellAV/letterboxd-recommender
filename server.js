@@ -48,55 +48,35 @@ mongoose
 		// 		console.log(err);
 		// 	}
 		// }
-		// const MOVIES = await Movie.aggregate([
-		// 	{
-		// 		$lookup: {
-		// 			from: "tags",
-		// 			localField: "tags.term",
-		// 			foreignField: "_id",
-		// 			as: "term"
-		// 		}
-		// 	},
-		// 	{
-		// 		$set: {
-		// 			tags: {
-		// 				$map: {
-		// 					input: "$tags",
-		// 					as: "el",
-		// 					in: {
-		// 						term: "$$el.term",
-		// 						tf: "$$el.tf",
-		// 						idf: {
-		// 							$arrayElemAt: [
-		// 								"$term.idf",
-		// 								{
-		// 									$indexOfArray: [
-		// 										"$term._id",
-		// 										"$$el.term"
-		// 									]
-		// 								}
-		// 							]
-		// 						}
-		// 					}
-		// 				}
-		// 			}
-		// 		}
-		// 	},
-		// 	{
-		// 		$unset: [
-		// 			"term",
-		// 			"database_avg_rating",
-		// 			"numTags",
-		// 			"createdAt",
-		// 			"updatedAt"
-		// 		]
-		// 	}
-		// ]).allowDiskUse(true);
+		const MOVIES = await Movie.aggregate([
+			{
+				$lookup: {
+					from: "tags",
+					localField: "tags",
+					foreignField: "_id",
+					as: "tags"
+				}
+			},
+			{
+				$set: {
+					tags: {
+						$map: {
+							input: "$tags",
+							as: "el",
+							in: {
+								_id: "$$el._id",
+								idf: "$$el.idf"
+							}
+						}
+					}
+				}
+			}
+		]).allowDiskUse(true);
 
 		// const MOVIES = await Movie.find({});
-		// console.log("Movies loaded");
-		// app.set("MOVIES", MOVIES);
-		// app.set("MOVIE_COUNT", MOVIES.length);
+		console.log("Movies loaded");
+		app.set("MOVIES", MOVIES);
+		app.set("MOVIE_COUNT", MOVIES.length);
 		app.listen(3000, console.log("Server started on localhost:3000"));
 
 		// await Movie.updateMany({}, [
@@ -158,14 +138,14 @@ mongoose
 		// 		$set: {
 		// 			tags: {
 		// 				$setUnion: [
-		// 					"$keywords",
-		// 					"$genres",
-		// 					"$cast",
-		// 					"$crew",
-		// 					"$production_countries",
-		// 					"$production_companies",
-		// 					"$spoken_languages",
-		// 					"$overview_words"
+		// "$keywords",
+		// "$genres",
+		// "$cast",
+		// "$crew",
+		// "$production_countries",
+		// "$production_companies",
+		// "$spoken_languages",
+		// "$overview_words"
 		// 				]
 		// 			}
 		// 		}
@@ -320,6 +300,7 @@ app.use(express.json());
 app.set("view engine", "ejs");
 
 app.use("/user", require("./routes/username"));
+app.use("/movie", require("./routes/movies"));
 app.use("/api", require("./routes/api"));
 app.get("/", (req, res) => {
 	res.render("pages/index");
