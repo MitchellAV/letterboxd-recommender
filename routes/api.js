@@ -12,7 +12,8 @@ const { cosine_similarity } = require("../recommendation_engine.js");
 const tagBlacklist = [
 	"aftercreditsstinger",
 	"duringcreditsstinger",
-	"based on novel or book"
+	"based on novel or book",
+	"woman director"
 ];
 
 router.post(
@@ -311,9 +312,9 @@ router.post(
 			tags = tags[0].tags;
 
 			const movies = req.app.get("MOVIES");
-			tags = tags.filter((tag) => (tag.count / movies.length) * 100 <= 3);
-			tags = tags.filter((tag) => !tagBlacklist.includes(tag._id));
 			tags = tags.sort((a, b) => b.count - a.count);
+			tags = tags.filter((tag) => (tag.count / movies.length) * 100 <= 5);
+			tags = tags.filter((tag) => !tagBlacklist.includes(tag._id));
 			switch (accuracy) {
 				case "high":
 					break;
