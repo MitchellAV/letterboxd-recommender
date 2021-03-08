@@ -48,6 +48,7 @@ mongoose
 		// 		console.log(err);
 		// 	}
 		// }
+		app.listen(3000, console.log("Server started on localhost:3000"));
 		const MOVIES = await Movie.aggregate([
 			{
 				$lookup: {
@@ -77,7 +78,6 @@ mongoose
 		console.log("Movies loaded");
 		app.set("MOVIES", MOVIES);
 		app.set("MOVIE_COUNT", MOVIES.length);
-		app.listen(3000, console.log("Server started on localhost:3000"));
 
 		// await Movie.updateMany({}, [
 		// 	{
