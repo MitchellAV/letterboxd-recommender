@@ -75,7 +75,7 @@ mongoose
 					}
 				}
 			}
-		]).allowDiskUse(true);
+		]);
 
 		// const MOVIES = await Movie.find({});
 		console.log("Movies loaded");
