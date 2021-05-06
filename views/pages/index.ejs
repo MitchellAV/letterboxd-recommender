@@ -13,7 +13,7 @@
 	<%- include ('../partials/navbar',{username:null}) %>
 		<main>
 			<h1>Welcome to the Home Page</h1>
-			<form id="create_user" action="/api/create_user" method="POST">
+			<form id="create_user" action="http://localhost:8080/api/update" method="POST">
 				<fieldset class="form-items">
 					<div class="form-group">
 						<label for="username">Enter your Letterboxd Username for custom recommendations</label>
@@ -27,7 +27,7 @@
 							<option value="high">I have all day</option>
 						</select>
 					</div>
-					<button class=" filter-btn" type="submit">Get Recommendations</i></button>
+					<button class="filter-btn" type="submit">Get Recommendations</button>
 				</fieldset>
 			</form>
 		</main>
