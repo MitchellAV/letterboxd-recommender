@@ -5,9 +5,10 @@
 	"main": "server.js",
 	"scripts": {
 		"users": "node getletterboxd.js",
-		"start": "node --max-old-space-size=1024 server.js",
+		"start": "node server.js",
 		"movies": "node --max-old-space-size=8192 getmovies.js",
 		"dev": "nodemon server.js",
+		"test": "node test_mongo.js",
 		"mongodb": "mongod --port 27017 --dbpath=D:/Desktop/Letterboxd-movie-recommender/movies-db"
 	},
 	"author": "",

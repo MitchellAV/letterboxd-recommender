@@ -1,14 +1,31 @@
 const express = require("express");
 const path = require("path");
-var cors = require("cors");
+const cors = require("cors");
 const dotenv = require("dotenv").config();
 const mongoose = require("mongoose");
-const Movie = require("./models/movie");
-const Tag = require("./models/tag");
-const User = require("./models/user");
 
 const app = express();
 
+app.use(cors());
+
+// Set static folder
+app.use(express.static(path.join(__dirname, "public")));
+
+// Body Parser Middleware
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
+// set the view engine to ejs
+app.set("view engine", "ejs");
+
+app.use("/user", require("./routes/username"));
+app.use("/movie", require("./routes/movies"));
+app.get("/", (req, res) => {
+	res.render("pages/index");
+});
+app.get("*", (req, res) => {
+	res.render("pages/404");
+});
 mongoose
 	.connect(process.env.MONGODB_URI, {
 		useNewUrlParser: true,
@@ -52,35 +69,35 @@ mongoose
 			process.env.PORT || 3000,
 			console.log("Server started on localhost:3000")
 		);
-		const MOVIES = await Movie.aggregate([
-			{
-				$lookup: {
-					from: "tags",
-					localField: "tags",
-					foreignField: "_id",
-					as: "tags"
-				}
-			},
-			{
-				$set: {
-					tags: {
-						$map: {
-							input: "$tags",
-							as: "el",
-							in: {
-								_id: "$$el._id",
-								idf: "$$el.idf"
-							}
-						}
-					}
-				}
-			}
-		]);
+		// const MOVIES = await Movie.aggregate([
+		// 	{
+		// 		$lookup: {
+		// 			from: "tags",
+		// 			localField: "tags",
+		// 			foreignField: "_id",
+		// 			as: "tags"
+		// 		}
+		// 	},
+		// 	{
+		// 		$set: {
+		// 			tags: {
+		// 				$map: {
+		// 					input: "$tags",
+		// 					as: "el",
+		// 					in: {
+		// 						_id: "$$el._id",
+		// 						idf: "$$el.idf"
+		// 					}
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// ]);
 
 		// const MOVIES = await Movie.find({});
-		console.log("Movies loaded");
-		app.set("MOVIES", MOVIES);
-		app.set("MOVIE_COUNT", MOVIES.length);
+		// console.log("Movies loaded");
+		// app.set("MOVIES", MOVIES);
+		// app.set("MOVIE_COUNT", MOVIES.length);
 
 		// await Movie.updateMany({}, [
 		// 	{
@@ -289,25 +306,3 @@ mongoose
 		// }
 	})
 	.catch((err) => console.error(err));
-
-app.use(cors());
-
-// Set static folder
-app.use(express.static(path.join(__dirname, "public")));
-
-// Body Parser Middleware
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-
-// set the view engine to ejs
-app.set("view engine", "ejs");
-
-app.use("/user", require("./routes/username"));
-app.use("/movie", require("./routes/movies"));
-app.use("/api", require("./routes/api"));
-app.get("/", (req, res) => {
-	res.render("pages/index");
-});
-app.get("*", (req, res) => {
-	res.render("pages/404");
-});
