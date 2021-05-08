@@ -22,22 +22,13 @@ router.get("/:id", async (req, res) => {
 		id,
 		filterParams
 	);
-	if (recommendations.length === 0) {
-		return res.render("pages/404");
-	}
 
 	await scrapeThumbnails(recommendations);
 	const url = format_url(req);
 
-	res.render("pages/movie", {
-		data: recommendations,
-		search: filterParams.filter,
-		page: filterParams.page,
-		queryString,
-		url,
-		filterParams
+	res.status(200).json({
+		movies: recommendations,
+		page: filterParams.page
 	});
-
-	// movieVector = movieVector.toArray();
 });
 module.exports = router;

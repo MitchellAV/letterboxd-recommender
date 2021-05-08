@@ -24,9 +24,6 @@ router.get("/:username/personal", async (req, res) => {
 
 	// Get user movies
 	let user_movie_ids = await get_user_movie_ids(username);
-	if (user_movie_ids.length === 0) {
-		return res.render("pages/404");
-	}
 
 	// Get recommendations from database
 	let user_movies = await get_user_movies(
@@ -36,22 +33,14 @@ router.get("/:username/personal", async (req, res) => {
 		sort_by
 	);
 
-	if (user_movies.length === 0) {
-		return res.redirect("/");
-	}
-
 	// Get thumbnails if not already saved
 	await scrapeThumbnails(user_movies);
 	const url = format_url(req);
 
-	res.render("pages/personal", {
-		data: user_movies,
-		search: filterParams.filter,
-		username,
-		page: filterParams.page,
-		queryString,
-		url: url,
-		filterParams
+	res.status(200).json({
+		movies: user_movies,
+
+		page: filterParams.page
 	});
 });
 
@@ -64,9 +53,6 @@ router.get("/:username", async (req, res) => {
 
 	// Get user movie ids
 	let user_movie_ids = await get_user_movie_ids(username);
-	if (user_movie_ids.length === 0) {
-		return res.render("pages/404");
-	}
 
 	// Get recommendations from database
 	let recommendations = await get_recommendations(
@@ -75,22 +61,14 @@ router.get("/:username", async (req, res) => {
 		filterParams,
 		sort_by
 	);
-	if (recommendations.length === 0) {
-		return res.redirect("/");
-	}
 
 	// Get thumbnails if not already saved
 	await scrapeThumbnails(recommendations);
 	const url = format_url(req);
 
-	res.render("pages/recommended", {
-		data: recommendations,
-		search: filterParams.filter,
-		username,
-		page: filterParams.page,
-		queryString,
-		url,
-		filterParams
+	res.status(200).json({
+		movies: recommendations,
+		page: filterParams.page
 	});
 });
 
