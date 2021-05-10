@@ -3,7 +3,6 @@ const router = express.Router();
 
 const { scrapeThumbnails } = require("../recommendation_engine.js");
 const {
-	format_query,
 	sort_order,
 	filter_params,
 	format_url
@@ -19,7 +18,6 @@ router.get("/:username/personal", async (req, res) => {
 	const filterParams = filter_params(req);
 
 	const username = req.params.username;
-	const queryString = format_query(req);
 	const sort_by = sort_order(filterParams.sort_type, filterParams.order);
 
 	// Get user movies
@@ -48,7 +46,6 @@ router.get("/:username", async (req, res) => {
 	// Initialize Constants
 	const filterParams = filter_params(req);
 	const username = req.params.username;
-	const queryString = format_query(req);
 	const sort_by = sort_order(filterParams.sort_type, filterParams.order);
 
 	// Get user movie ids
