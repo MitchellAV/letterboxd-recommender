@@ -12,10 +12,29 @@ const format_query = (req) => {
 
 const sort_order = (sort_type, order) => {
 	let sort_by;
-	if (sort_type !== "score.score") {
-		sort_by = { [sort_type]: order, "score.score": -1 };
-	} else {
-		sort_by = { [sort_type]: order };
+
+	switch (sort_type) {
+		case "recommended":
+			sort_by = { "score.score": order };
+			break;
+		case "runtime":
+			sort_by = { runtime: order };
+			break;
+		case "movie_rating":
+			sort_by = { vote_average: order };
+			break;
+		case "user_rating":
+			sort_by = { "score.userRating": order };
+			break;
+		case "votes":
+			sort_by = { vote_count: order };
+			break;
+		case "release_date":
+			sort_by = { release_date: order };
+			break;
+		default:
+			sort_by = { "score.score": order };
+			break;
 	}
 	return sort_by;
 };

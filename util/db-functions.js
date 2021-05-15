@@ -50,7 +50,7 @@ const get_recommendations = async (
 	filterParams,
 	sort_by
 ) => {
-	let {
+	const {
 		filter,
 		min_vote_average,
 		min_runtime,
@@ -79,7 +79,7 @@ const get_recommendations = async (
 	];
 	if (filter) {
 		match_expr.push({
-			$in: [filter.toLowerCase(), "$filter"]
+			$in: [filter, "$filter"]
 		});
 	}
 
@@ -118,7 +118,7 @@ const get_recommendations = async (
 				$sort: sort_by
 			},
 			{
-				$skip: page * num_per_page
+				$skip: (page - 1) * num_per_page
 			},
 			{
 				$limit: num_per_page
@@ -138,7 +138,7 @@ const get_user_movies = async (
 	filterParams,
 	sort_by
 ) => {
-	let {
+	const {
 		filter,
 		min_vote_average,
 		min_runtime,
@@ -151,7 +151,6 @@ const get_user_movies = async (
 		{
 			$in: [username, "$score._id"]
 		},
-
 		{
 			$gte: ["$vote_count", min_vote_count]
 		},
@@ -168,7 +167,7 @@ const get_user_movies = async (
 
 	if (filter) {
 		match_expr.push({
-			$in: [filter.toLowerCase(), "$filter"]
+			$in: [filter, "$filter"]
 		});
 	}
 	let user_movies;
@@ -261,7 +260,7 @@ const get_user_movies = async (
 				$sort: sort_by
 			},
 			{
-				$skip: page * num_per_page
+				$skip: (page - 1) * num_per_page
 			},
 			{
 				$limit: num_per_page

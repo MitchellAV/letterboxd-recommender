@@ -17,6 +17,10 @@ app.use(express.json());
 
 app.use("/user", require("./routes/username"));
 app.use("/movie", require("./routes/movies"));
+app.use((err, req, res, next) => {
+	console.error(err);
+	res.status(err.status).json(err);
+});
 
 mongoose
 	.connect(process.env.MONGODB_URI, {
@@ -28,6 +32,9 @@ mongoose
 	.then(async (result) => {
 		console.log("Sucessfully Connected to MongoDB Atlas Database");
 
-		app.listen(5000, console.log("Server started on localhost:3000"));
+		app.listen(
+			process.env.PORT || 5000,
+			console.log(`Server started on PORT: ${process.env.PORT || 5000}`)
+		);
 	})
 	.catch((err) => console.error(err));
