@@ -83,9 +83,9 @@ const get_recommendations = async (
 		});
 	}
 
-	let recommendations;
+	let db_response;
 	try {
-		recommendations = await Movie.aggregate([
+		db_response = await Movie.aggregate([
 			{
 				$match: {
 					$expr: {
@@ -118,18 +118,32 @@ const get_recommendations = async (
 				$sort: sort_by
 			},
 			{
-				$skip: (page - 1) * num_per_page
-			},
-			{
-				$limit: num_per_page
+				$facet: {
+					metadata: [{ $count: "total" }],
+					data: [
+						{
+							$skip: (page - 1) * num_per_page
+						},
+						{
+							$limit: num_per_page
+						}
+					]
+				}
 			}
-		]);
+		]).allowDiskUse(true);
+
+		const { metadata, data } = db_response[0];
+		const total = metadata[0].total;
+		let recommendations = format_movies(data);
+		const toal_pages = Math.ceil(total / num_per_page);
+		return [recommendations, total, toal_pages];
 	} catch (err) {
 		console.error(err);
-		recommendations = [];
+		let recommendations = [];
+		let total = 0;
+		const toal_pages = Math.ceil(total / num_per_page);
+		return [recommendations, total, toal_pages];
 	}
-	recommendations = format_movies(recommendations);
-	return recommendations;
 };
 
 const get_user_movies = async (
@@ -170,9 +184,9 @@ const get_user_movies = async (
 			$in: [filter, "$filter"]
 		});
 	}
-	let user_movies;
+	let db_response;
 	try {
-		user_movies = await Movie.aggregate([
+		db_response = await Movie.aggregate([
 			{
 				$match: {
 					$expr: {
@@ -260,18 +274,32 @@ const get_user_movies = async (
 				$sort: sort_by
 			},
 			{
-				$skip: (page - 1) * num_per_page
-			},
-			{
-				$limit: num_per_page
+				$facet: {
+					metadata: [{ $count: "total" }],
+					data: [
+						{
+							$skip: (page - 1) * num_per_page
+						},
+						{
+							$limit: num_per_page
+						}
+					]
+				}
 			}
-		]);
+		]).allowDiskUse(true);
+		const { metadata, data } = db_response[0];
+		const total = metadata[0].total;
+		let user_movies = format_movies(data);
+		const toal_pages = Math.ceil(total / num_per_page);
+		return [user_movies, total, toal_pages];
 	} catch (err) {
 		console.error(err);
-		user_movies = [];
+
+		let user_movies = [];
+		let total = 0;
+		const toal_pages = Math.ceil(total / num_per_page);
+		return [user_movies, total, toal_pages];
 	}
-	user_movies = format_movies(user_movies);
-	return user_movies;
 };
 
 module.exports = { get_user_movie_ids, get_recommendations, get_user_movies };

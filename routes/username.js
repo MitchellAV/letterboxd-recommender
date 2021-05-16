@@ -93,7 +93,7 @@ router.get("/:username/personal", paramValidation, async (req, res, next) => {
 		let user_movie_ids = await get_user_movie_ids(username);
 
 		// Get recommendations from database
-		let user_movies = await get_user_movies(
+		let [user_movies, total, toal_pages] = await get_user_movies(
 			username,
 			user_movie_ids,
 			filterParams,
@@ -106,7 +106,8 @@ router.get("/:username/personal", paramValidation, async (req, res, next) => {
 		res.status(200).json({
 			movies: user_movies,
 			page: filterParams.page,
-			numPages: 100
+			total: total,
+			numPages: toal_pages
 		});
 	}
 });
@@ -133,7 +134,7 @@ router.get("/:username", paramValidation, async (req, res, next) => {
 		let user_movie_ids = await get_user_movie_ids(username);
 
 		// Get recommendations from database
-		let recommendations = await get_recommendations(
+		let [recommendations, total, toal_pages] = await get_recommendations(
 			username,
 			user_movie_ids,
 			filterParams,
@@ -146,7 +147,8 @@ router.get("/:username", paramValidation, async (req, res, next) => {
 		res.status(200).json({
 			movies: recommendations,
 			page: filterParams.page,
-			numPages: 100
+			total: total,
+			numPages: toal_pages
 		});
 	}
 });

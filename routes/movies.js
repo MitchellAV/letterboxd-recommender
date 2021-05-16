@@ -87,7 +87,7 @@ router.get("/:id", paramValidation, async (req, res, next) => {
 		res.status(200).json({
 			movies: recommendations,
 			page: filterParams.page,
-			numPages: 100
+			numPages: 1
 		});
 	}
 });
