@@ -1,3 +1,5 @@
+const { query, param } = require("express-validator");
+
 const format_query = (req) => {
 	const qIndex = req.url.indexOf("?");
 	let queryString;
@@ -21,7 +23,7 @@ const sort_order = (sort_type, order) => {
 			sort_by = { runtime: order };
 			break;
 		case "movie_rating":
-			sort_by = { vote_average: order };
+			sort_by = { adjusted_rating: order };
 			break;
 		case "user_rating":
 			sort_by = { "score.userRating": order };
@@ -78,4 +80,83 @@ const format_url = (req) => {
 	return url;
 };
 
-module.exports = { format_query, sort_order, filter_params, format_url };
+const validationParams = (
+	{ min_vote_count, min_vote_average, min_runtime },
+	isUsername
+) => {
+	const validation = [];
+	if (isUsername)
+		validation.push(
+			param("username", "Please enter your letterboxd username")
+				.trim()
+				.isString()
+				.toLowerCase()
+				.notEmpty()
+				.escape()
+		);
+
+	validation.push([
+		query("filter").trim().isString().toLowerCase().escape().default(""),
+		query("min_vote_count")
+			.customSanitizer((value, { req, location, path }) => {
+				return req[location][path] ? value : min_vote_count;
+			})
+			.toInt()
+			.isInt({ min: 1 }),
+		query("min_vote_average")
+			.customSanitizer((value, { req, location, path }) => {
+				return req[location][path] ? value : min_vote_average;
+			})
+			.toFloat()
+			.isFloat({ min: 0.5 }),
+		query("min_runtime")
+			.customSanitizer((value, { req, location, path }) => {
+				return req[location][path] ? value : min_runtime;
+			})
+			.toInt()
+			.isInt({ min: 1 }),
+		query("page")
+			.customSanitizer((value, { req, location, path }) => {
+				return req[location][path] ? value : 1;
+			})
+			.toInt()
+			.isInt({ min: 1 }),
+		query("num_per_page")
+			.customSanitizer((value, { req, location, path }) => {
+				return req[location][path] ? value : 30;
+			})
+			.toInt()
+			.isIn([30, 60, 90, 120]),
+		query("sort_type")
+			.customSanitizer((value, { req, location, path }) => {
+				return req[location][path] ? value : "recommended";
+			})
+			.trim()
+			.isString()
+			.toLowerCase()
+			.escape()
+			.isIn([
+				"recommended",
+				"runtime",
+				"movie_rating",
+				"user_rating",
+				"votes",
+				"release_date"
+			]),
+		query("order")
+			.customSanitizer((value, { req, location, path }) => {
+				return req[location][path] ? value : -1;
+			})
+			.toInt()
+			.isIn([-1, 1])
+	]);
+	return validation;
+};
+
+module.exports = {
+	format_query,
+	sort_order,
+	filter_params,
+	format_url,
+	validationParams
+};

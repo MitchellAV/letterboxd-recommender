@@ -83,9 +83,8 @@ const get_recommendations = async (
 		});
 	}
 
-	let db_response;
 	try {
-		db_response = await Movie.aggregate([
+		const data = await Movie.aggregate([
 			{
 				$match: {
 					$expr: {
@@ -113,27 +112,48 @@ const get_recommendations = async (
 					}
 				}
 			},
+			{
+				$match: {
+					$expr: {
+						$ne: ["$score.score", 0]
+					}
+				}
+			},
 
 			{
 				$sort: sort_by
 			},
 			{
-				$facet: {
-					metadata: [{ $count: "total" }],
-					data: [
-						{
-							$skip: (page - 1) * num_per_page
-						},
-						{
-							$limit: num_per_page
-						}
-					]
-				}
+				$skip: (page - 1) * num_per_page
+			},
+			{
+				$limit: num_per_page
 			}
+			// {
+			// 	$facet: {
+			// 		metadata: [{ $count: "total" }],
+			// 		data: [
+			// 			{
+			// 				$skip: (page - 1) * num_per_page
+			// 			},
+			// 			{
+			// 				$limit: num_per_page
+			// 			}
+			// 		]
+			// 	}
+			// }
 		]).allowDiskUse(true);
-
-		const { metadata, data } = db_response[0];
-		const total = metadata[0].total;
+		// console.log(data);
+		const total = await Movie.countDocuments({
+			$expr: {
+				$and: match_expr
+			},
+			score: {
+				$elemMatch: { _id: username, score: { $gt: 0 } }
+			}
+		});
+		// const total = data[0].metadata[0].total;
+		// console.log(total);
 		let recommendations = format_movies(data);
 		const toal_pages = Math.ceil(total / num_per_page);
 		return [recommendations, total, toal_pages];

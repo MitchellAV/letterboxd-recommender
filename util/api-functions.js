@@ -12,7 +12,7 @@ const get_recommendations_by_movie_id = async (id, params) => {
 				params
 			}
 		);
-		recommendations = res.data.recommendations;
+		recommendations = res.data;
 	} catch (err) {
 		console.error(err);
 		return [];
