@@ -1,5 +1,6 @@
 .env
 .vscode
+*.js
 node_modules
 json/
 public/thumbnails/

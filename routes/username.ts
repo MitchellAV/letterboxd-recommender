@@ -6,125 +6,83 @@ import { validationResult } from "express-validator";
 
 import { validationParams, sort_order } from "../util/route-functions";
 import { scrapeThumbnails } from "../util/recommendation_engine";
-import { QueryParams } from "../util/types";
-
-const {
-	get_user_movie_ids,
-	get_recommendations,
-	get_user_movies
-} = require("../util/db-functions");
-
-router.get(
-	"/:username/personal",
-	validationParams(
-		{
-			min_vote_count: 1,
-			min_vote_average: 0.5,
-			min_runtime: 1
-		},
-		true
-	),
-	async (req: Request, res: Response, next: NextFunction) => {
-		const errors = validationResult(req);
-
-		if (!errors.isEmpty()) {
-			// There are errors. Render form again with sanitized values/errors messages.
-			// Error messages can be returned in an array using `errors.array()`.
-
-			return next({
-				message: "Please fix the following fields:",
-				status: 400,
-				error: errors.array()
-			});
-		} else {
-			// Initialize constants
-			const filterParams: QueryParams = req.query as any;
-			const { username } = req.params;
-			const sort_by = sort_order(
-				filterParams.sort_type,
-				filterParams.order
-			);
-
-			// Get user movies
-			let user_movie_ids = await get_user_movie_ids(username);
-
-			// Get recommendations from database
-			let [user_movies, total, total_pages] = await get_user_movies(
-				username,
-				user_movie_ids,
-				filterParams,
-				sort_by
-			);
-
-			// Get thumbnails if not already saved
-			scrapeThumbnails(user_movies);
-
-			res.status(200).json({
-				movies: user_movies,
-				filterParams,
-				page: filterParams.page,
-				total: total,
-				numPages: total_pages
-			});
-		}
-	}
-);
+import { QueryParams } from "../types";
+import {
+  add_user_to_database,
+  add_watched_movies_to_user,
+  clear_prefs_from_user,
+  clear_watched_movie_from_user,
+  create_prefs_for_user,
+  recommendations_for_user_collaborative,
+  recommendations_for_user_content,
+} from "../db_functions";
+import {
+  getLetterboxdUserMovies,
+  isRealLetterboxdUser,
+} from "../getletterboxd";
 
 router.get(
-	"/:username",
-	validationParams(
-		{
-			min_vote_count: 300,
-			min_vote_average: 6,
-			min_runtime: 30
-		},
-		true
-	),
-	async (req: Request, res: Response, next: NextFunction) => {
-		const errors = validationResult(req);
+  "/:id/update/watched",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user_id = req.params.id;
+      const isReal = await isRealLetterboxdUser(user_id);
+      if (isReal) {
+        await add_user_to_database(user_id);
 
-		if (!errors.isEmpty()) {
-			// There are errors. Render form again with sanitized values/errors messages.
-			// Error messages can be returned in an array using `errors.array()`.
+        const movie_list = await getLetterboxdUserMovies(user_id);
 
-			return next({
-				message: "Please fix the following fields:",
-				status: 400,
-				error: errors.array()
-			});
-		} else {
-			// Initialize Constants
-			const filterParams: QueryParams = req.query as any;
-			const { username } = req.params;
-			const sort_by = sort_order(
-				filterParams.sort_type,
-				filterParams.order
-			);
+        try {
+          // await add_doujin_to_database(id);
+          await clear_watched_movie_from_user(user_id);
+          console.log("cleared watch movies");
 
-			// Get user movie ids
-			let user_movie_ids = await get_user_movie_ids(username);
-
-			// Get recommendations from database
-			let [recommendations, total, total_pages] =
-				await get_recommendations(
-					username,
-					user_movie_ids,
-					filterParams,
-					sort_by
-				);
-
-			// Get thumbnails if not already saved
-			scrapeThumbnails(recommendations);
-
-			res.status(200).json({
-				movies: recommendations,
-				filterParams,
-				page: filterParams.page,
-				total: total,
-				numPages: total_pages
-			});
-		}
-	}
+          await add_watched_movies_to_user(user_id, movie_list);
+          console.log("added watched movies to user");
+          await clear_prefs_from_user(user_id);
+          console.log("clear prefs from user");
+          await create_prefs_for_user(user_id);
+          console.log("created prefs for user");
+          res.status(200).json({ status: "success" });
+        } catch (error) {
+          console.log(error);
+          res.status(400).json({ status: "failed" });
+        }
+      } else {
+        console.log("Not a real Letterboxd user");
+        res.status(400).json({ status: "failed" });
+      }
+    } catch (error) {
+      res.status(400).json({ status: "failed" });
+    }
+  }
 );
-
+router.get(
+  "/:id/recommend/content",
+  async (req: Request, res: Response, next: NextFunction) => {
+    const user_id = req.params.id;
+    console.log(user_id);
+    try {
+      const rec = await recommendations_for_user_content(user_id, {});
+      res.status(200).json(rec);
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({ status: "failed" });
+    }
+  }
+);
+router.get(
+  "/:id/recommend/collaborative",
+  async (req: Request, res: Response, next: NextFunction) => {
+    const user_id = req.params.id;
+    console.log(user_id);
+    try {
+      const rec = await recommendations_for_user_collaborative(user_id, {});
+      res.status(200).json(rec);
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({ status: "failed" });
+    }
+  }
+);
 module.exports = router;
