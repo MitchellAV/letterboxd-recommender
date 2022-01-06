@@ -10,14 +10,15 @@ const app = express();
 app.use(cors());
 
 // Set static folder
-app.use(express.static(path.join(__dirname, "public")));
+app.use("/api", express.static(path.join(__dirname, "public")));
 
 // Body Parser Middleware
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-app.use("/user", require("./routes/username"));
-app.use("/movie", require("./routes/movies"));
+app.use("/api/user", require("./routes/user"));
+app.use("/api/movies", require("./routes/movies"));
+app.use("/api/movie", require("./routes/movie"));
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   return res.status(err.status).json(err);

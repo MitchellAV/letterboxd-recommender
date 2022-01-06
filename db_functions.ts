@@ -6,8 +6,10 @@ import {
   getMovieById,
   getMovieCreditsById,
   getMovieKeywordsById,
+  removeElementsFromArray,
 } from "./database";
 import {
+  ContentRecommendFilters,
   FormattedCast,
   FormattedCompany,
   FormattedCountry,
@@ -15,7 +17,13 @@ import {
   FormattedGenre,
   FormattedKeyword,
   FormattedLanguage,
+  MovieOptions,
+  MovieTagOptions,
+  MovieTagRelationshipOptions,
   OptionParameters,
+  RecommendContentMovie,
+  TagOptions,
+  TagRelationshipOptions,
 } from "./types";
 import Movie from "./entities/Movie";
 import axios from "axios";
@@ -320,14 +328,13 @@ export const createLanguageRelationships = async (
   tags: FormattedLanguage[]
 ) => {
   for (const tag of tags) {
-    const { english_name, iso_639_1, name } = tag;
+    const { iso_639_1, name } = tag;
     if (!name) continue;
     await write(
       `MERGE (t:Language {name: $name})
       ON CREATE
         SET 
         t.iso_639_1 = $iso_639_1,
-        t.english_name = $english_name,
         t:Tag
       WITH t
       MATCH (d:Movie {movieId: $movieId})
@@ -335,7 +342,6 @@ export const createLanguageRelationships = async (
       MERGE (d)-[r:SPOKEN_IN]-(t)`,
       {
         movieId: setPropertyInt(movieId),
-        english_name: setPropertyString(english_name),
         iso_639_1: setPropertyString(iso_639_1),
         name: setPropertyString(name),
       }
@@ -704,8 +710,13 @@ export const create_prefs_for_user = async (userId: string) => {
     WITH t,avgRating, p, freq, tf, avgMovieRating
     MERGE (p)-[s:SCORED {tf:tf,freq:freq}]-(t)
     SET 
-    s.rating = avgRating,
-    p.avg_rating = avgMovieRating`,
+    s.rating = CASE 
+    WHEN avgMovieRating IS NULL THEN 1.0
+    WHEN avgRating IS NULL THEN avgMovieRating
+    ELSE avgRating END,
+    p.avg_rating = CASE 
+    WHEN avgMovieRating IS NULL THEN 1.0
+    ELSE avgMovieRating END`,
     {
       userId: userId,
     }
@@ -714,57 +725,155 @@ export const create_prefs_for_user = async (userId: string) => {
   });
 };
 
-export const create_filter_query = (options: OptionParameters) => {
-  const where: string[] = [];
-  if (options) {
-    const MIN_RATING = 0;
-    const MIN_VOTES = 200;
-    const MIN_RUNTIME = 0;
-    const MIN_POPULARITY = 0;
-    const MIN_IDF = 0;
-    const USER_RATING_CUTOFF = "p1.avg_rating";
-    const IS_ADULT = false;
-    const INCLUDE_WATCHLIST = false;
-    const BLACKLIST: string[] = [];
-    const REQUIRED: string[] = [];
-    const OPTIONAL: string[] = [];
-    const IGNORE: string[] = [
-      "duringcreditsstinger",
-      "aftercreditsstinger",
-      // "based on young adult novel",
-    ];
-    const IGNORE_LABEL: string[] = [
-      // "Genre",
-      // "Crew",
-      // "Cast",
-      // "Keyword",
-      // "Company",
-      // "Language",
-      // "Country",
-    ];
+const weight_rating = (
+  type: "linear" | "cubic" | "exponential" | "uniform" | "rating",
+  useFixed: boolean,
+  fixedMaxValue: number
+) => {
+  const x = `x.rating`;
+  const b = `p1.avg_rating`;
+  const yMax = fixedMaxValue;
 
+  const polyFixedPointA = (yMax: number, n: number, b: string, c: number) =>
+    `(( ${yMax} - ${c} ) / (( 10 - ${b} ) ^ ${n}))`;
+  const expFixedPointA = (yMax: number, b: string) =>
+    `(log(${yMax})/(10 - ${b}))`;
+
+  if (type == "linear") {
+    const n = 1;
+    const c = 1;
+    const a = useFixed ? polyFixedPointA(yMax, 1, b, c) : 1;
+    return `( ${a} * ( ${x} - ${b} ) ^ ${n} + ${c})`;
+  } else if (type == "cubic") {
+    const n = 3;
+    const c = 1;
+    const a = useFixed ? polyFixedPointA(yMax, 1, b, c) : 0.05;
+    return `( ${a} * ( ${x} - ${b} ) ^ ${n} + ${c})`;
+  } else if (type == "exponential") {
+    const a = useFixed ? expFixedPointA(yMax, b) : 0.5;
+    return `(exp(${a}*(${x}-${b})))`;
+  } else if (type == "uniform") {
+    return `(${x}-${b})`;
+  } else if (type == "rating") {
+    return `(${x})`;
+  }
+  return;
+};
+
+const create_where_tag = (options: TagOptions) => {
+  const where: string[] = [];
+  const label = "k";
+  if (options) {
     const {
-      avgRating,
-      includeWatched,
-      isAdult,
-      numVotes,
-      popularity,
-      releaseDate,
-      runtime,
-      status,
-      tagBlacklist,
-      tagOptional,
-      tagRequired,
-      tagIgnore,
-      tagRelevence,
-      ignoreLabel,
-      userRatingCutoff,
+      ignore_tags,
+      tag_idf,
+      tag_labels,
+      tag_popularity,
+      tag_department_label,
     } = options;
 
-    where.push(`(r.order < 10  OR r.order IS NULL)`);
+    // ALL Tags
+    // IDF
+    tag_idf.min > 0 && where.push(`${label}.idf >= ${tag_idf.min}`);
+    tag_idf.max > 0 && where.push(`${label}.idf <= ${tag_idf.max}`);
+
+    // NAME
+    ignore_tags.forEach((term) => where.push(`${label}.name <> '${term}'`));
+
+    // LABEL
+    const all_tag_labels = [
+      "Genre",
+      "Crew",
+      "Cast",
+      "Keyword",
+      "Company",
+      "Language",
+      "Country",
+    ];
+
+    removeElementsFromArray(all_tag_labels, tag_labels).forEach((term) =>
+      where.push(`NOT ${label}:${term}`)
+    );
+
+    // Person
+    const ignore_known_for_department_labels: string[] = [
+      // "Writing",
+      // "Costume & Make-Up",
+      // "Production",
+      // "Acting",
+      // "Directing",
+      // "Art",
+      // "Editing",
+      // "Sound",
+      // "Visual Effects",
+      // "Crew",
+      // "Camera",
+      // "Lighting",
+      // "Creator",
+    ];
+    const known_for_department_query = ignore_known_for_department_labels.map(
+      (term) => `${label}.known_for_department <> '${term}'`
+    );
+    known_for_department_query.length &&
+      where.push(
+        "(" +
+          known_for_department_query.join(" OR ") +
+          ` OR ${label}.known_for_department IS NULL)`
+      );
+
+    // POPULARITY
+    const popularityQuery: string[] = [];
+    tag_popularity.min > 0 &&
+      popularityQuery.push(`${label}.popularity >= ${tag_popularity.min}`);
+    tag_popularity.max > 0 &&
+      popularityQuery.push(`${label}.popularity <= ${tag_popularity.max}`);
+    popularityQuery.length &&
+      where.push(
+        "(" + popularityQuery.join(" OR ") + ` OR ${label}.popularity IS NULL)`
+      );
+  }
+
+  return where;
+};
+const create_where_tag_relationship = (options: TagRelationshipOptions) => {
+  const where: string[] = [];
+  const prefLabel = "p1";
+  const relLabel = "x";
+  if (options) {
+    const { user_tag_frequency, user_tag_rating, useUserAvgRating } = options;
+
+    // ALL Tags
+    // FREQUENCY
+    user_tag_frequency.min > 0 &&
+      where.push(`${relLabel}.freq >= ${user_tag_frequency.min}`);
+    // FREQUENCY
+
+    if (useUserAvgRating) {
+      where.push(`${relLabel}.rating >= ${prefLabel}.avg_rating`);
+    } else {
+      user_tag_rating.min > 0 &&
+        where.push(`${relLabel}.rating >= ${user_tag_rating.min}`);
+    }
+  }
+
+  return where;
+};
+const create_where_movie_tag_relationship = (
+  options: MovieTagRelationshipOptions
+) => {
+  const where: string[] = [];
+  const prefLabel = "p2";
+  const relLabel = "r";
+  if (options) {
+    const { cast_order, crew_job } = options;
+
+    // ALL Tags
+    const MIN_ACTORS = 10;
+    cast_order.min > 0 &&
+      where.push(`(${relLabel}.order < ${cast_order.min}  OR r.order IS NULL)`);
 
     const crewJobQuery: string[] = [];
-    const crewJob = [
+    const DEFAULT_CREW_JOB = [
       "Director",
       "Screenplay",
       "Writer",
@@ -779,138 +888,290 @@ export const create_filter_query = (options: OptionParameters) => {
       // 'Production Design',
       // "Animation",
     ];
-    crewJob.forEach((term) => crewJobQuery.push(`r.job = '${term}'`));
+
+    crew_job.forEach((term) =>
+      crewJobQuery.push(`${relLabel}.job = '${term}'`)
+    );
     crewJobQuery.length
-      ? where.push("(" + crewJobQuery.join(" OR ") + " OR r.job IS NULL)")
-      : null;
-
-    userRatingCutoff
-      ? where.push(`x.rating > ${userRatingCutoff}`)
-      : where.push(`x.rating > ${USER_RATING_CUTOFF}`);
-
-    avgRating?.min
-      ? where.push(`p2.vote_average > ${avgRating.min}`)
-      : where.push(`p2.vote_average > ${MIN_RATING}`);
-    avgRating?.max ? where.push(`p2.vote_average < ${avgRating.max}`) : null;
-    tagRelevence?.min
-      ? where.push(`k.idf > ${tagRelevence.min}`)
-      : where.push(`k.idf > ${MIN_IDF}`);
-    tagRelevence?.max ? where.push(`k.idf < ${tagRelevence.max}`) : null;
-
-    numVotes?.min
-      ? where.push(`p2.vote_count > ${numVotes.min}`)
-      : where.push(`p2.vote_count > ${MIN_VOTES}`);
-    numVotes?.max ? where.push(`p2.vote_count < ${numVotes.max}`) : null;
-
-    popularity?.min
-      ? where.push(`p2.popularity > ${popularity.min}`)
-      : where.push(`p2.popularity > ${MIN_POPULARITY}`);
-    popularity?.max ? where.push(`p2.popularity < ${popularity.max}`) : null;
-
-    runtime?.min
-      ? where.push(`p2.runtime > ${runtime.min}`)
-      : where.push(`p2.runtime > ${MIN_RUNTIME}`);
-    runtime?.max ? where.push(`p2.runtime < ${runtime.max}`) : null;
-
-    isAdult != undefined
-      ? where.push(`p2.adult = ${isAdult ? "true" : "false"}`)
-      : where.push(`p2.adult = ${IS_ADULT ? "true" : "false"}`);
-
-    includeWatched != undefined
       ? where.push(
-          `${
-            includeWatched ? "" : "NOT"
-          } EXISTS((:User {userId: $userId})-[:WATCHED]-(p2))`
+          "(" + crewJobQuery.join(" OR ") + ` OR ${relLabel}.job IS NULL)`
         )
-      : where.push(
-          `${
-            INCLUDE_WATCHLIST ? "" : "NOT"
-          } EXISTS((:User {userId: $userId})-[:WATCHED]-(p2))`
-        );
-
-    const ignore = tagIgnore ? tagIgnore : IGNORE;
-    ignore.forEach((term) => where.push(`k.name <> '${term}'`));
-    const ignore_label = IGNORE_LABEL;
-    ignore_label.forEach((term) => where.push(`NOT k:${term}`));
-
-    const blacklist = tagBlacklist ? tagBlacklist : BLACKLIST;
-    blacklist.forEach((term) =>
-      where.push(`NOT EXISTS((p2)--(:Tag {name:'${term}'}))`)
-    );
-
-    const required = tagRequired ? tagRequired : REQUIRED;
-    required.forEach((term) =>
-      where.push(`EXISTS((p2)--(:Tag {name:'${term}'}))`)
-    );
-    const optionalQueries: string[] = [];
-    const optional = tagOptional ? tagOptional : OPTIONAL;
-    optional.forEach((term) =>
-      optionalQueries.push(`EXISTS((p2)--(:Tag {name:'${term}'}))`)
-    );
-    optionalQueries.length
-      ? where.push("(" + optionalQueries.join(" OR ") + ")")
       : null;
   }
 
   return where;
 };
-const f = (type: string) => {
-  const x = `x.rating`;
-  const b = `p1.avg_rating`;
 
-  const polyFixedPointA = (yMax: number, n: number, b: string, c: number) =>
-    `(( ${yMax} - ${c} ) / (( 10 - ${b} ) ^ ${n}))`;
+const create_where_movie = (options: MovieOptions) => {
+  const where: string[] = [];
+  const label = "p2";
+  if (options) {
+    const {
+      movie_popularity,
+      movie_rating,
+      movie_release_date,
+      movie_runtime,
+      movie_status,
+      movie_votes,
+    } = options;
 
-  if (type == "linear") {
-    const n = 1;
-    const a = 0.5;
-    const c = 1;
-    // const maxPoint = 5;
-    // const maxA = `(( ${maxPoint} - ${c} )/(10-${b}))`;
-    return `( ${a} * ( ${x} - ${b} ) ^ ${n} + ${c})`;
-  } else if (type == "cubic") {
-    const n = 3;
-    const c = 1;
-    const a = polyFixedPointA(5, n, b, c); //0.05;
-    // const maxPoint = 5;
-    // const maxA = `(( ${maxPoint} - ${c} )/(10-${b}))`;
-    return `( ${a} * ( ${x} - ${b} ) ^ ${n} + ${c})`;
-  } else if (type == "exponential") {
-    const a = 0.5;
-    // const maxPoint = 5;
-    // const maxA = `(( ${maxPoint} - ${c} )/(10-${b}))`;
-    return `(exp(${a}*(${x}-${b})))`;
+    // ALL Tags
+    // TITLE
+    // RATING
+    movie_rating.min > 0 &&
+      where.push(`${label}.vote_average >= ${movie_rating.min}`);
+    movie_rating.max > 0 &&
+      where.push(`${label}.vote_average <= ${movie_rating.max}`);
+
+    // VOTES
+    movie_votes.min > 0 &&
+      where.push(`${label}.vote_count >= ${movie_votes.min}`);
+    movie_votes.max > 0 &&
+      where.push(`${label}.vote_count <= ${movie_votes.max}`);
+
+    // POPULARITY
+
+    movie_popularity.min > 0 &&
+      where.push(`${label}.popularity >= ${movie_popularity.min}`);
+    movie_popularity.max > 0 &&
+      where.push(`${label}.popularity <= ${movie_popularity.max}`);
+
+    // RUNTIME
+    movie_runtime.min > 0 &&
+      where.push(`${label}.runtime >= ${movie_runtime.min}`);
+    movie_runtime.max > 0 &&
+      where.push(`${label}.runtime <= ${movie_runtime.max}`);
+
+    // RELEASE DATE
+    movie_release_date.min > 0 &&
+      where.push(`${label}.release_date >= '${movie_release_date.min}-01-01'`);
+    movie_release_date.max > 0 &&
+      where.push(`${label}.release_date <= '${movie_release_date.max}-01-01'`);
+
+    // Person
+    const DEFAULT_IGNORE_STATUS: string[] = [
+      // "Rumored",
+      // "Planned",
+      // "In Production",
+      // "Post Production",
+      // "Released",
+      // "Canceled",
+    ];
+    const status_query = movie_status.map(
+      (term) => `${label}.status <> '${term}'`
+    );
+    status_query.length && where.push(`(${status_query.join(" OR ")})`);
   }
-  return;
+
+  return where;
+};
+const create_where_movie_tag = (options: MovieTagOptions) => {
+  const where: string[] = [];
+  const label = "p2";
+  if (options) {
+    const { tagsBlacklist, tagsOptional, tagsRequired, includeWatched } =
+      options;
+
+    where.push(
+      `${
+        includeWatched || "NOT"
+      } EXISTS((:User {userId: $userId})-[:WATCHED]-(${label}))`
+    );
+
+    tagsBlacklist.forEach((term) =>
+      where.push(`NOT EXISTS((${label})--(:Tag {name:'${term}'}))`)
+    );
+
+    tagsRequired.forEach((term) =>
+      where.push(`EXISTS((${label})--(:Tag {name:'${term}'}))`)
+    );
+    const optionalQueries: string[] = [];
+
+    tagsOptional.forEach((term) =>
+      optionalQueries.push(`EXISTS((${label})--(:Tag {name:'${term}'}))`)
+    );
+    optionalQueries.length &&
+      where.push("(" + optionalQueries.join(" OR ") + ")");
+  }
+
+  return where;
 };
 export const recommendations_for_user_content = async (
   userId: string,
-  options: OptionParameters
-) => {
-  const where = create_filter_query(options);
+  options: ContentRecommendFilters
+): Promise<RecommendContentMovie[]> => {
+  const {
+    tag_labels,
+    ignore_tags,
+    includeWatched,
+    movie_popularity_max,
+    movie_popularity_min,
+    movie_rating_max,
+    movie_rating_min,
+    movie_release_date_max,
+    movie_release_date_min,
+    movie_runtime_max,
+    movie_runtime_min,
+    movie_status,
+    movie_votes_max,
+    movie_votes_min,
+    order_by,
+    order_by_dir,
+    page,
+    per_page,
+    tag_department_label,
+    tag_idf_max,
+    tag_idf_min,
+    tag_popularity_max,
+    tag_popularity_min,
+    tagsBlacklist,
+    tagsOptional,
+    tagsRequired,
+    useUserAvgRating,
+    user_tag_frequency_min,
+    user_tag_rating_min,
+  } = options;
+  // const where = create_filter_query(options);
+  const tagRelationshipWhere = create_where_tag_relationship({
+    useUserAvgRating,
+    user_tag_frequency: { min: user_tag_frequency_min, max: -1 },
+    user_tag_rating: { min: user_tag_rating_min, max: -1 },
+  });
+  const tagWhere = create_where_tag({
+    ignore_tags,
+    tag_labels,
+    tag_department_label,
+    tag_idf: { max: tag_idf_max, min: tag_idf_min },
+    tag_popularity: { max: tag_popularity_max, min: tag_popularity_min },
+  });
+  const movieTagRelationshipWhere = create_where_movie_tag_relationship({
+    cast_order: { max: -1, min: 10 },
+    crew_job: ["Director", "Director of Photography", "Executive Producer"],
+  });
+  const movieWhere = create_where_movie({
+    movie_runtime: { min: movie_runtime_min, max: movie_runtime_max },
+    movie_votes: { min: movie_votes_min, max: movie_votes_max },
+    movie_popularity: { max: movie_popularity_max, min: movie_popularity_min },
+    movie_rating: { max: movie_rating_max, min: movie_rating_min },
+    movie_release_date: {
+      max: movie_release_date_max,
+      min: movie_release_date_min,
+    },
+    movie_status,
+  });
+  const movieRelationshipsWhere = create_where_movie_tag({
+    tagsRequired,
+    includeWatched,
+    tagsBlacklist,
+    tagsOptional,
+  });
 
-  const weighting = f("cubic");
+  const rating_weight = weight_rating("exponential", true, 10);
+  const tagPrefWhere = [...tagWhere, ...tagRelationshipWhere];
+  const tagPrefMovieWhere = [
+    ...tagWhere,
+    ...tagRelationshipWhere,
+    ...movieTagRelationshipWhere,
+    ...movieWhere,
+    ...movieRelationshipsWhere,
+  ];
+  const tagMovieWhere = [
+    ...tagWhere,
+    ...movieWhere,
+    ...movieTagRelationshipWhere,
+    ...movieRelationshipsWhere,
+  ];
+  // ${where.length ? "WHERE " + where.join(" AND ") : ""}
   return read(
     `MATCH (p1:Pref {userId: $userId})-[x:SCORED]-(k:Tag)
-    WITH p1,collect( ${weighting} * x.tf * k.idf ) as p1tfidf
+    
+    ${tagPrefWhere.length && "WHERE " + tagPrefWhere.join(" AND ")}
+   
+    WITH p1,collect( ${rating_weight} * x.tf * k.idf ) as p1tfidf
     
     MATCH (p1)-[x:SCORED]-(k:Tag)-[r]-(p2:Movie)
     
-    ${where.length ? "WHERE " + where.join(" AND ") : ""}
+    ${tagPrefMovieWhere.length && "WHERE " + tagPrefMovieWhere.join(" AND ")}
 
-    WITH distinct k, ${weighting} * x.tf * k.idf * k.idf as weight,p1,x,p2,p1tfidf order by weight desc
     
-    WITH SUM( ${weighting} * x.tf * k.idf * k.idf ) AS xyDotProduct,
+    WITH distinct k, ${rating_weight} * x.tf * k.idf * k.idf as weight, p1, x, p2, p1tfidf order by weight desc
+    
+    WITH SUM( weight ) AS xyDotProduct,
     SQRT(REDUCE(xDot = 0.0, a IN p1tfidf | xDot + a^2)) AS xLength,
     p2,
     collect(k.name) as commonTags
+    
+    MATCH (p2)-[r]-(k:Tag)
+    ${tagMovieWhere.length && "WHERE " + tagMovieWhere.join(" AND ")}
+    WITH xyDotProduct,
+    xLength,
+    p2,
+    commonTags,
+    SQRT(REDUCE(yDot = 0.0, b IN COLLECT(k.idf) | yDot + b^2)) AS yLength
+    
+    WITH p2, xyDotProduct / (xLength * yLength) AS sim,commonTags
+    
+    MATCH (p2)--(k:Tag)
+    WITH p2,sim, k, commonTags order by k.idf 
+    WITH p2,sim, collect(k.name) as tags, commonTags 
+    
+    RETURN p2,commonTags,sim,tags
+    ORDER BY sim ${order_by_dir} SKIP ${
+      (page - 1) * per_page
+    } LIMIT ${per_page}`,
+    {
+      userId: userId,
+    }
+  )
+    .then((results) => {
+      return results.records.map((r) => {
+        const d = r.get("p2").properties;
+
+        const similarity: number = r.get("sim");
+        const common: string[] = r.get("commonTags");
+        const tags: string[] = r.get("tags");
+        // console.log(common[0]);
+
+        return {
+          similarity,
+          details: new Movie(d).toJson(),
+          tags,
+          common: common.slice(0, 5),
+        };
+      });
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
+export const recommendations_for_movie_content = async (
+  movieId: number,
+  options: OptionParameters
+) => {
+  // const where = create_filter_query(options);
+
+  // const rating_weight = weight_rating("exponential", true);
+  // ${where.length ? "WHERE " + where.join(" AND ") : ""}
+  return read(
+    `MATCH (p1:Movie {movieId: $movieId})--(k:Tag)
+    WITH p1, collect(  k.idf ) as p1tfidf
+    
+    MATCH (p1)--(k:Tag)--(p2:Movie)
+    WHERE p2.vote_count > 100 AND p2.runtime >= 45
+    
+    WITH distinct k,  k.idf *  k.idf as weight, p1, p2, p1tfidf
+    
+    WITH SUM( weight ) AS xyDotProduct,
+    SQRT(REDUCE(xDot = 0.0, a IN p1tfidf | xDot + a^2)) AS xLength,
+    p2,
+    collect(k) as commonTags
     
     MATCH (p2)--(k2:Tag)
     WITH xyDotProduct,
     xLength,
     p2,
     commonTags,
-    SQRT(REDUCE(yDot = 0.0, b IN COLLECT(k2.idf) | yDot + b^2)) AS yLength
+    SQRT(REDUCE(yDot = 0.0, b IN COLLECT( k2.idf) | yDot + b^2)) AS yLength
     
     WITH p2, xyDotProduct / (xLength * yLength) AS sim,commonTags
     
@@ -922,7 +1183,7 @@ export const recommendations_for_user_content = async (
     ORDER BY sim desc
     LIMIT 100`,
     {
-      userId: userId,
+      movieId: movieId,
     }
   )
     .then((results) => {
@@ -930,14 +1191,14 @@ export const recommendations_for_user_content = async (
         const d = r.get("p2").properties;
 
         const similarity = r.get("sim");
-        const common = r.get("commonTags");
-        const tags = r.get("tags");
+        const common: string[] = r.get("commonTags");
+        const tags: string[] = r.get("tags");
 
         return {
-          similarity,
+          // similarity,
           ...new Movie(d).toJson(),
           // tags,
-          common,
+          // common,
         };
       });
     })

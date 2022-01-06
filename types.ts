@@ -1,7 +1,6 @@
 export interface Error {
   message: string;
   status: number;
-  error: any[];
 }
 
 export interface QueryParams {
@@ -126,7 +125,13 @@ export interface MovieTMDB {
   revenue: number;
   runtime: number | null;
   spoken_languages: SpokenLanguage[];
-  status: string;
+  status:
+    | "Rumored"
+    | "Planned"
+    | "In Production"
+    | "Post Production"
+    | "Released"
+    | "Canceled";
   tagline: string | null;
   title: string;
   video: boolean;
@@ -154,7 +159,13 @@ export interface FormattedMovie {
   revenue: number;
   runtime: number | null;
   //   spoken_languages: SpokenLanguage[];
-  status: string;
+  status:
+    | "Rumored"
+    | "Planned"
+    | "In Production"
+    | "Post Production"
+    | "Released"
+    | "Canceled";
   tagline: string | null;
   title: string;
   video: boolean;
@@ -177,7 +188,6 @@ export interface FormattedCountry {
   name: string;
 }
 export interface FormattedLanguage {
-  english_name: string;
   iso_639_1: string;
   name: string;
 }
@@ -224,6 +234,7 @@ export interface DatabaseMovie {
   budget: number;
   homepage: string | null;
   imdb_id: string;
+  letterboxd_id?: number;
   lastUpdated: number;
   movieId: number;
   original_language: string;
@@ -234,7 +245,43 @@ export interface DatabaseMovie {
   release_date: string;
   revenue: number;
   runtime: number | null;
-  status: string;
+  status:
+    | "Rumored"
+    | "Planned"
+    | "In Production"
+    | "Post Production"
+    | "Released"
+    | "Canceled";
+  tagline: string | null;
+  title: string;
+  video: boolean;
+  vote_average: number;
+  vote_count: number;
+}
+export interface DatabaseMovie {
+  adult: boolean;
+  backdrop_path: string | null;
+  belongs_to_collection: number | null;
+  budget: number;
+  homepage: string | null;
+  imdb_id: string;
+  lastUpdated: number;
+  movieId: number;
+  original_language: string;
+  original_title: string;
+  overview: string;
+  popularity: number;
+  poster_path: string | null;
+  release_date: string;
+  revenue: number;
+  runtime: number | null;
+  status:
+    | "Rumored"
+    | "Planned"
+    | "In Production"
+    | "Post Production"
+    | "Released"
+    | "Canceled";
   tagline: string | null;
   title: string;
   video: boolean;
@@ -243,19 +290,243 @@ export interface DatabaseMovie {
 }
 
 export interface OptionParameters {
+  user_tag_rating_min?: number;
+  user_tag_frequency_min?: number;
+  useUserAvgRating?: boolean;
+  tag_popularity?: { min?: number; max?: number };
+  ignore_tags?: string[];
+  tag_labels?: TagLabel[];
+  tag_department_label?: string[];
+  tag_idf?: { min?: number; max?: number };
+  movie_popularity?: { min?: number; max?: number };
+  movie_runtime?: { min?: number; max?: number };
+  movie_release_date?: { min?: number; max?: number };
+  movie_status?: Status[];
+  movie_rating?: { min?: number; max?: number };
+  movie_votes?: { min?: number; max?: number };
+  includeWatched?: boolean;
+  tagsRequired?: string[];
+  tagsBlacklist?: string[];
+  tagsOptional?: string[];
+  order_by?:
+    | "title"
+    | "popularity"
+    | "release_date"
+    | "runtime"
+    | "vote_average"
+    | "vote_count";
+  order_by_dir?: "asc" | "desc";
+  page?: number;
+  per_page?: number;
+}
+type TagLabel =
+  | "Genre"
+  | "Crew"
+  | "Cast"
+  | "Keyword"
+  | "Company"
+  | "Language"
+  | "Country";
+export interface TagOptions {
+  tag_popularity: { min: number; max: number };
+  ignore_tags: string[];
+  tag_labels: TagLabel[];
+  tag_department_label: string[];
+  tag_idf: { min: number; max: number };
+}
+type Status =
+  | "Rumored"
+  | "Planned"
+  | "In Production"
+  | "Post Production"
+  | "Released"
+  | "Canceled";
+export interface MovieOptions {
+  movie_popularity: { min: number; max: number };
+  movie_runtime: { min: number; max: number };
+  movie_release_date: { min: number; max: number };
+  movie_status: Status[];
+  movie_rating: { min: number; max: number };
+  movie_votes: { min: number; max: number };
+}
+export interface MovieTagOptions {
+  includeWatched: boolean;
+  tagsRequired: string[];
+  tagsBlacklist: string[];
+  tagsOptional: string[];
+}
+export interface TagRelationshipOptions {
+  user_tag_rating: { min: number; max: number };
+  user_tag_frequency: { min: number; max: number };
+  useUserAvgRating: boolean;
+}
+
+type CrewJob =
+  | "Director"
+  | "Screenplay"
+  | "Writer"
+  | "Director of Photography"
+  | "Original Music Composer"
+  | "Editor"
+  | "Art Direction"
+  | "Music"
+  | "Story"
+  | "Costume Design"
+  | "Novel"
+  | "Production Design"
+  | "Executive Producer"
+  | "Animation";
+export interface MovieTagRelationshipOptions {
+  cast_order: { min: number; max: number };
+  crew_job: CrewJob[];
+}
+export interface MovieFilterParameters {
   isAdult?: boolean;
-  popularity?: { min: number; max: number };
+  title?: string;
   releaseDate?: { min: number; max: number };
   runtime?: { min: number; max: number };
-  status?: string;
+  status?:
+    | "Rumored"
+    | "Planned"
+    | "In Production"
+    | "Post Production"
+    | "Released"
+    | "Canceled";
   avgRating?: { min: number; max: number };
   numVotes?: { min: number; max: number };
-  includeWatched?: boolean;
+  popularity?: { min: number; max: number };
   tagBlacklist?: string[];
   tagRequired?: string[];
   tagOptional?: string[];
-  tagIgnore?: string[];
-  ignoreLabel?: string[];
-  userRatingCutoff?: number;
-  tagRelevence?: { min: number; max: number };
+}
+
+export interface PageOptions {
+  order_by:
+    | "title"
+    | "popularity"
+    | "release_date"
+    | "runtime"
+    | "vote_average"
+    | "vote_count";
+  order_by_dir: "asc" | "desc";
+  page: number;
+  per_page: number;
+}
+
+export interface MovieJSON {
+  adult: boolean | null;
+  backdrop_path: string | null;
+  belongs_to_collection: number | null;
+  budget: number;
+  homepage: string | null;
+  imdb_link: string;
+  letterboxd_link: string | null;
+  lastUpdated: number;
+  movieId: number;
+  original_language: string;
+  original_title: string;
+  overview: string;
+  popularity: number;
+  poster_path: string | null;
+  release_date: string;
+  revenue: number;
+  runtime: number | null;
+  status:
+    | "Rumored"
+    | "Planned"
+    | "In Production"
+    | "Post Production"
+    | "Released"
+    | "Canceled";
+  tagline: string | null;
+  title: string;
+  video: boolean;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface RecommendContentMovie {
+  similarity: number;
+  details: MovieJSON;
+  tags: string[];
+  common: string[];
+}
+
+export interface RecommendMovieResponse {
+  movies: RecommendContentMovie[];
+}
+
+export interface ContentRecommendQuery {
+  user_tag_rating_min?: string;
+  user_tag_frequency_min?: string;
+  useUserAvgRating?: string;
+  tag_popularity_min?: string;
+  tag_popularity_max?: string;
+  ignore_tags?: string | string[];
+  tag_labels?: TagLabel | TagLabel[];
+  tag_department_label?: string | string[];
+  tag_idf_min?: string;
+  tag_idf_max?: string;
+  movie_popularity_min?: string;
+  movie_popularity_max?: string;
+  movie_runtime_min?: string;
+  movie_runtime_max?: string;
+  movie_release_date_min?: string;
+  movie_release_date_max?: string;
+  movie_status?: Status | Status[];
+  movie_rating_min?: string;
+  movie_rating_max?: string;
+  movie_votes_min?: string;
+  movie_votes_max?: string;
+  includeWatched?: string;
+  tagsRequired?: string | string[];
+  tagsBlacklist?: string | string[];
+  tagsOptional?: string | string[];
+  order_by?:
+    | "title"
+    | "popularity"
+    | "release_date"
+    | "runtime"
+    | "vote_average"
+    | "vote_count";
+  order_by_dir?: "asc" | "desc";
+  page?: string;
+  per_page?: string;
+}
+export interface ContentRecommendFilters {
+  user_tag_rating_min: number;
+  user_tag_frequency_min: number;
+  useUserAvgRating: boolean;
+  tag_popularity_min: number;
+  tag_popularity_max: number;
+  ignore_tags: string[];
+  tag_labels: TagLabel[];
+  tag_department_label: string[];
+  tag_idf_min: number;
+  tag_idf_max: number;
+  movie_popularity_min: number;
+  movie_popularity_max: number;
+  movie_runtime_min: number;
+  movie_runtime_max: number;
+  movie_release_date_min: number;
+  movie_release_date_max: number;
+  movie_status: Status[];
+  movie_rating_min: number;
+  movie_rating_max: number;
+  movie_votes_min: number;
+  movie_votes_max: number;
+  includeWatched: boolean;
+  tagsRequired: string[];
+  tagsBlacklist: string[];
+  tagsOptional: string[];
+  order_by:
+    | "title"
+    | "popularity"
+    | "release_date"
+    | "runtime"
+    | "vote_average"
+    | "vote_count";
+  order_by_dir: "asc" | "desc";
+  page: number;
+  per_page: number;
 }

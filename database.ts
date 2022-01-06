@@ -55,7 +55,8 @@ export const formatLanguages = (
   languages: SpokenLanguage[]
 ): FormattedLanguage[] => {
   return languages.map((language) => {
-    return language;
+    const { english_name, iso_639_1, name } = language;
+    return { iso_639_1, name: english_name };
   });
 };
 export const formatKeywords = (
@@ -220,16 +221,16 @@ export const getMovieCreditsById = async (id: number) => {
   }
 };
 
-export const removeElementsFromArray = (
-  array: number[],
-  toRemoveArray: number[]
+export const removeElementsFromArray = <Type>(
+  array: Type[],
+  toRemoveArray: Type[]
 ) => {
   const toRemoveArraySet = new Set(toRemoveArray);
 
   return array.filter((num) => !toRemoveArraySet.has(num));
 };
 
-export const scrapeNHentai = async () => {
+export const scrapeTMDB = async () => {
   const movie_ids = await get_movies_to_update();
   const all_movie_ids = await get_all_movie_ids_in_database();
   const all_movie_ids_set = new Set(all_movie_ids);

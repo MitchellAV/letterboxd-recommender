@@ -1,7 +1,9 @@
 import axios from "axios";
+import { log } from "console";
 import fs from "fs";
+import { MovieJSON } from "../types";
 
-const download_image = (url: string, image_path: string) =>
+const download_image = async (url: string, image_path: string) =>
   axios({
     url,
     responseType: "stream",
@@ -15,23 +17,27 @@ const download_image = (url: string, image_path: string) =>
       })
   );
 
-export const scrapeThumbnails = (database: any[]) => {
-  const database_length = database.length;
-  for (let i = 0; i < database_length; i++) {
-    const movie = database[i];
-    const { _id, thumbnail_url } = movie;
-    const path = "./public/thumbnails/" + _id + "-thumb.jpg";
+export const scrapeThumbnails = async (movies: MovieJSON[]) => {
+  const movies_length = movies.length;
+  for (let i = 0; i < movies_length; i++) {
+    const movie = movies[i];
+    const { movieId, poster_path } = movie;
+    const path = "./public/thumbnails/" + movieId + "-thumb.jpg";
     try {
       if (!fs.existsSync(path)) {
-        try {
-          download_image(thumbnail_url, path);
-          console.log(`Downloaded: ${i + 1}/${database_length}`);
-        } catch (err) {
-          console.error(err);
+        if (poster_path) {
+          try {
+            await download_image(poster_path, path);
+            console.log(`Downloaded: ${i + 1}/${movies_length}`);
+          } catch (err) {
+            throw new Error("Unable to download movie poster");
+          }
         }
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err.message) {
+        console.log(err.message);
+      }
     }
   }
 };
