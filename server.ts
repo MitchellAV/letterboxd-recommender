@@ -19,6 +19,7 @@ app.use(express.json());
 app.use("/api/user", require("./routes/user"));
 app.use("/api/movies", require("./routes/movies"));
 app.use("/api/movie", require("./routes/movie"));
+app.use("/api/database", require("./routes/database"));
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   return res.status(err.status).json(err);

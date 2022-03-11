@@ -331,7 +331,7 @@ export interface TagOptions {
   tag_popularity: { min: number; max: number };
   ignore_tags: string[];
   tag_labels: TagLabel[];
-  tag_department_label: string[];
+  tag_department_labels: string[];
   tag_idf: { min: number; max: number };
 }
 type Status =
@@ -342,6 +342,7 @@ type Status =
   | "Released"
   | "Canceled";
 export interface MovieOptions {
+  title: string;
   movie_popularity: { min: number; max: number };
   movie_runtime: { min: number; max: number };
   movie_release_date: { min: number; max: number };
@@ -377,7 +378,7 @@ type CrewJob =
   | "Executive Producer"
   | "Animation";
 export interface MovieTagRelationshipOptions {
-  cast_order: { min: number; max: number };
+  cast_order: number;
   crew_job: CrewJob[];
 }
 export interface MovieFilterParameters {
@@ -464,7 +465,7 @@ export interface ContentRecommendQuery {
   tag_popularity_max?: string;
   ignore_tags?: string | string[];
   tag_labels?: TagLabel | TagLabel[];
-  tag_department_label?: string | string[];
+  tag_department_labels?: string | string[];
   tag_idf_min?: string;
   tag_idf_max?: string;
   movie_popularity_min?: string;
@@ -482,6 +483,7 @@ export interface ContentRecommendQuery {
   tagsRequired?: string | string[];
   tagsBlacklist?: string | string[];
   tagsOptional?: string | string[];
+  tagsInCommon?: string;
   order_by?:
     | "title"
     | "popularity"
@@ -501,7 +503,7 @@ export interface ContentRecommendFilters {
   tag_popularity_max: number;
   ignore_tags: string[];
   tag_labels: TagLabel[];
-  tag_department_label: string[];
+  tag_department_labels: string[];
   tag_idf_min: number;
   tag_idf_max: number;
   movie_popularity_min: number;
@@ -519,6 +521,7 @@ export interface ContentRecommendFilters {
   tagsRequired: string[];
   tagsBlacklist: string[];
   tagsOptional: string[];
+  tagsInCommon: number;
   order_by:
     | "title"
     | "popularity"

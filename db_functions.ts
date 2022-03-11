@@ -593,6 +593,19 @@ export const addMovieNotFoundId = async (tmdb_id: number) => {
     throw e;
   });
 };
+export const isMovieNotFoundById = async (tmdb_id: number) => {
+  return read(
+    `MATCH (n:NotFound { movieId:$movieId })
+    RETURN n.letterboxd_id as id`,
+    { movieId: neo4j.int(tmdb_id) }
+  )
+    .then((results) => {
+      return results.records.length !== 0 ? true : false;
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
 export const getAllMoviesNotFound = async () => {
   return write(
     `MATCH (n)
@@ -609,9 +622,42 @@ export const getAllMoviesNotFound = async () => {
       throw e;
     });
 };
+export const isIgnoreMovie = async (tmdb_id: number) => {
+  return write(
+    `MATCH (n:Ignore { movieId:$movieId })
+    RETURN n.movieId as id`,
+    { movieId: neo4j.int(tmdb_id) }
+  )
+    .then((results) => {
+      return results.records.length !== 0 ? true : false;
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
+export const isIgnoreLetterboxdMovie = async (letterboxd_id: number) => {
+  return read(
+    `MATCH (n:IgnoreLetterboxd { letterboxd_id:$letterboxd_id })
+    RETURN n.letterboxd_id as id`,
+    { letterboxd_id: neo4j.int(letterboxd_id) }
+  )
+    .then((results) => {
+      return results.records.length !== 0 ? true : false;
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
 export const addMovieIgnoreId = async (tmdb_id: number) => {
   return write(`MERGE (n:Ignore {movieId: $tmdb_id})`, {
     tmdb_id: neo4j.int(tmdb_id),
+  }).catch((e) => {
+    throw e;
+  });
+};
+export const addMovieLetterboxdIgnoreId = async (letterboxd_id: number) => {
+  return write(`MERGE (n:IgnoreLetterboxd {letterboxd_id: $letterboxd_id})`, {
+    letterboxd_id: neo4j.int(letterboxd_id),
   }).catch((e) => {
     throw e;
   });
@@ -659,8 +705,57 @@ export const add_watched_movie_to_user = async (
     throw e;
   });
 };
+export const add_network_to_user = async (
+  userId: string,
+  otherUserId: string,
+  type: "FOLLOWING" | "FOLLOWERS"
+) => {
+  let rel = "";
+  if (type == "FOLLOWING") {
+    rel = `(u)-[:FOLLOWING]->(u2)`;
+  } else if (type == "FOLLOWERS") {
+    rel = `(u)<-[:FOLLOWING]-(u2)`;
+  } else {
+    throw console.log("type does not exist");
+  }
+  await write(
+    `MATCH (u:User {userId: $userId })
+    MERGE (u2:User {userId: $otherUserId })
+    MERGE ${rel}`,
+    { userId, otherUserId }
+  ).catch((e) => {
+    throw e;
+  });
+};
+export const add_watchlist_movie_to_user = async (
+  userId: string,
+  movie: {
+    rating: number | null;
+    tmdb_id: number;
+  }
+) => {
+  const { rating, tmdb_id } = movie;
+  let params: {
+    userId: string;
+    movieId: Integer;
+    rating?: Integer;
+  } = {
+    userId: userId,
+    movieId: neo4j.int(tmdb_id),
+  };
+  if (rating) params.rating = neo4j.int(rating);
+  await write(
+    `MATCH (u:User {userId: $userId })
+    MATCH (m:Movie {movieId: $movieId })
+    MERGE (u)-[:WATCHLIST]-(m)
+`,
+    params
+  ).catch((e) => {
+    throw e;
+  });
+};
 
-export const clear_watched_movie_from_user = async (userId: string) => {
+export const clear_watched_movies_from_user = async (userId: string) => {
   await write(
     `MATCH (u:User {userId: $userId})-[r:WATCHED]->(:Movie)
     DELETE r`,
@@ -671,7 +766,41 @@ export const clear_watched_movie_from_user = async (userId: string) => {
     throw e;
   });
 };
+export const clear_watchlist_movies_from_user = async (userId: string) => {
+  await write(
+    `MATCH (u:User {userId: $userId})-[r:WATCHLIST]->(:Movie)
+    DELETE r`,
+    {
+      userId: userId,
+    }
+  ).catch((e) => {
+    throw e;
+  });
+};
+export const clear_network_from_user = async (
+  userId: string,
+  type: "FOLLOWING" | "FOLLOWERS"
+) => {
+  await write(
+    `MATCH (u:User {userId: $userId})-[r:${type}]-(:User)
+    DELETE r`,
+    {
+      userId: userId,
+    }
+  ).catch((e) => {
+    throw e;
+  });
+};
 
+export const add_all_network_to_user = async (
+  userId: string,
+  network_users: string[],
+  type: "FOLLOWING" | "FOLLOWERS"
+) => {
+  for (const user of network_users) {
+    await add_network_to_user(userId, user, type);
+  }
+};
 export const add_watched_movies_to_user = async (
   userId: string,
   watched_movies: {
@@ -681,6 +810,17 @@ export const add_watched_movies_to_user = async (
 ) => {
   for (const movie of watched_movies) {
     await add_watched_movie_to_user(userId, movie);
+  }
+};
+export const add_watchlist_movies_to_user = async (
+  userId: string,
+  watched_movies: {
+    rating: number | null;
+    tmdb_id: number;
+  }[]
+) => {
+  for (const movie of watched_movies) {
+    await add_watchlist_movie_to_user(userId, movie);
   }
 };
 export const clear_prefs_from_user = async (userId: string) => {
@@ -694,10 +834,134 @@ export const clear_prefs_from_user = async (userId: string) => {
     throw e;
   });
 };
+export const does_pref_exists = async (userId: string) => {
+  return await read(
+    `MATCH (u:Pref {userId: $userId})
+    RETURN u`,
+    {
+      userId: userId,
+    }
+  )
+    .then((results) => {
+      return results.records.length !== 0 ? true : false;
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
+export const get_user_rating_histogram = async (userId: string) => {
+  return await read(
+    `MATCH (u:User {userId:$userId})-[r:WATCHED]-(m:Movie)
+    WITH r.rating as rating, size(collect(m.title)) as freq
+    RETURN rating,freq order by rating`,
+    {
+      userId: userId,
+    }
+  )
+    .then((results) => {
+      let rating_hist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      results.records.forEach((r) => {
+        let rating = toNumber(r.get("rating") || 0);
+        let freq = toNumber(r.get("freq"));
+
+        rating_hist[rating] = freq;
+      });
+      return rating_hist;
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
+export const get_user_watched_stats = async (userId: string) => {
+  return await read(
+    `MATCH (u:User {userId:$userId})-[r:WATCHED]-(m:Movie)
+    RETURN avg(r.rating) as avg_rating, stDevP(r.rating) as std_rating, size(collect(m.title)) as total_watched`,
+    {
+      userId: userId,
+    }
+  )
+    .then((results) => {
+      let r = results.records[0];
+
+      let avg_rating = toNumber(r.get("avg_rating") || 0);
+      let std_rating = toNumber(r.get("std_rating") || 0);
+      let total_watched = toNumber(r.get("total_watched") || 0);
+
+      return { avg_rating, std_rating, total_watched };
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
+export const get_user_watchlist_stats = async (userId: string) => {
+  return await read(
+    `MATCH (u:User {userId:$userId})-[r:WATCHLIST]-(m:Movie)
+    RETURN size(collect(m.title)) as total_watchlist`,
+    {
+      userId: userId,
+    }
+  )
+    .then((results) => {
+      let r = results.records[0];
+
+      let total_watchlist = toNumber(r.get("total_watchlist") || 0);
+
+      return { total_watchlist };
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
+export const get_user_network_following = async (userId: string) => {
+  return await read(
+    `MATCH (u:User {userId:$userId})-[r:FOLLOWING]-(f:User)
+    WITH collect(f.userId) as following
+    RETURN following, size(following) as total_following`,
+    {
+      userId: userId,
+    }
+  )
+    .then((results) => {
+      let r = results.records[0];
+
+      let following: string[] = r.get("following");
+      let total_following = toNumber(r.get("total_following") || 0);
+
+      return { following, total_following };
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
+export const get_user_tags = async (userId: string) => {
+  return await read(
+    `MATCH m=(n:Pref {userId:$userId})-[r:SCORED]-(a)
+    WITH r.freq * a.idf as score, a
+    // WHERE score IS NOT NULL
+    RETURN score, a.name as tag_name, labels(a) as labels order by score desc limit 100`,
+    {
+      userId: userId,
+    }
+  )
+    .then((results) => {
+      return results.records.map((r) => {
+        let tag_name: string = r.get("tag_name");
+        let labels: string[] = r
+          .get("labels")
+          .filter((tag: string) => tag !== "Tag");
+        let score = toNumber(r.get("score") || 0);
+
+        return { tag_name, labels, score };
+      });
+    })
+    .catch((e) => {
+      throw e;
+    });
+};
 
 export const create_prefs_for_user = async (userId: string) => {
   await write(
-    `MATCH (u:User {userId: $userId })-[r:WATCHED]-(:Movie)--(t:Tag)
+    `MATCH (u:User {userId: $userId })-[r:WATCHED|WATCHLIST]-(:Movie)--(t:Tag)
     WITH u,avg(r.rating) as avgMovieRating
     SET u.avg_rating = avgMovieRating
     WITH u,avgMovieRating
@@ -726,16 +990,17 @@ export const create_prefs_for_user = async (userId: string) => {
 };
 
 const weight_rating = (
-  type: "linear" | "cubic" | "exponential" | "uniform" | "rating",
+  x: string,
+  b: string,
+  type: "linear" | "cubic" | "exponential" | "sigmoid" | "uniform" | "rating",
   useFixed: boolean,
   fixedMaxValue: number
 ) => {
-  const x = `x.rating`;
-  const b = `p1.avg_rating`;
   const yMax = fixedMaxValue;
 
+  // `(( ${yMax} - ${c} ) / (( 10 - ${b} ) ^ ${n}))`;
   const polyFixedPointA = (yMax: number, n: number, b: string, c: number) =>
-    `(( ${yMax} - ${c} ) / (( 10 - ${b} ) ^ ${n}))`;
+    `((-${c}/((-${b})^${n}))*((${x}-${b})^${n})+${c})`;
   const expFixedPointA = (yMax: number, b: string) =>
     `(log(${yMax})/(10 - ${b}))`;
 
@@ -752,33 +1017,35 @@ const weight_rating = (
   } else if (type == "exponential") {
     const a = useFixed ? expFixedPointA(yMax, b) : 0.5;
     return `(exp(${a}*(${x}-${b})))`;
+  } else if (type == "sigmoid") {
+    const a = 1;
+    return `(1/(1+(exp(-${a}*(${x}-${b})))))`;
   } else if (type == "uniform") {
-    return `(${x}-${b})`;
+    return `(1)`;
   } else if (type == "rating") {
-    return `(${x})`;
+    return `(${x}-${b})`;
   }
   return;
 };
 
-const create_where_tag = (options: TagOptions) => {
+const create_where_tag_properties = (tagLabel: string, options: TagOptions) => {
   const where: string[] = [];
-  const label = "k";
   if (options) {
     const {
       ignore_tags,
       tag_idf,
       tag_labels,
       tag_popularity,
-      tag_department_label,
+      tag_department_labels,
     } = options;
 
     // ALL Tags
     // IDF
-    tag_idf.min > 0 && where.push(`${label}.idf >= ${tag_idf.min}`);
-    tag_idf.max > 0 && where.push(`${label}.idf <= ${tag_idf.max}`);
+    tag_idf.min > 0 && where.push(`${tagLabel}.idf >= ${tag_idf.min}`);
+    tag_idf.max > 0 && where.push(`${tagLabel}.idf <= ${tag_idf.max}`);
 
     // NAME
-    ignore_tags.forEach((term) => where.push(`${label}.name <> '${term}'`));
+    ignore_tags.forEach((term) => where.push(`${tagLabel}.name <> '${term}'`));
 
     // LABEL
     const all_tag_labels = [
@@ -792,7 +1059,7 @@ const create_where_tag = (options: TagOptions) => {
     ];
 
     removeElementsFromArray(all_tag_labels, tag_labels).forEach((term) =>
-      where.push(`NOT ${label}:${term}`)
+      where.push(`NOT ${tagLabel}:${term}`)
     );
 
     // Person
@@ -812,33 +1079,38 @@ const create_where_tag = (options: TagOptions) => {
       // "Creator",
     ];
     const known_for_department_query = ignore_known_for_department_labels.map(
-      (term) => `${label}.known_for_department <> '${term}'`
+      (term) => `${tagLabel}.known_for_department <> '${term}'`
     );
     known_for_department_query.length &&
       where.push(
         "(" +
           known_for_department_query.join(" OR ") +
-          ` OR ${label}.known_for_department IS NULL)`
+          ` OR ${tagLabel}.known_for_department IS NULL)`
       );
 
     // POPULARITY
     const popularityQuery: string[] = [];
     tag_popularity.min > 0 &&
-      popularityQuery.push(`${label}.popularity >= ${tag_popularity.min}`);
+      popularityQuery.push(`${tagLabel}.popularity >= ${tag_popularity.min}`);
     tag_popularity.max > 0 &&
-      popularityQuery.push(`${label}.popularity <= ${tag_popularity.max}`);
+      popularityQuery.push(`${tagLabel}.popularity <= ${tag_popularity.max}`);
     popularityQuery.length &&
       where.push(
-        "(" + popularityQuery.join(" OR ") + ` OR ${label}.popularity IS NULL)`
+        "(" +
+          popularityQuery.join(" OR ") +
+          ` OR ${tagLabel}.popularity IS NULL)`
       );
   }
 
   return where;
 };
-const create_where_tag_relationship = (options: TagRelationshipOptions) => {
+const create_where_pref_tag_relationship = (
+  prefLabel: string,
+  relLabel: string,
+  options: TagRelationshipOptions
+) => {
   const where: string[] = [];
-  const prefLabel = "p1";
-  const relLabel = "x";
+
   if (options) {
     const { user_tag_frequency, user_tag_rating, useUserAvgRating } = options;
 
@@ -846,48 +1118,39 @@ const create_where_tag_relationship = (options: TagRelationshipOptions) => {
     // FREQUENCY
     user_tag_frequency.min > 0 &&
       where.push(`${relLabel}.freq >= ${user_tag_frequency.min}`);
+    user_tag_frequency.max > 0 &&
+      where.push(`${relLabel}.freq <= ${user_tag_frequency.max}`);
     // FREQUENCY
 
     if (useUserAvgRating) {
-      where.push(`${relLabel}.rating >= ${prefLabel}.avg_rating`);
+      where.push(`${relLabel}.rating > ${prefLabel}.avg_rating`);
     } else {
       user_tag_rating.min > 0 &&
         where.push(`${relLabel}.rating >= ${user_tag_rating.min}`);
+      user_tag_rating.max > 0 &&
+        where.push(`${relLabel}.rating <= ${user_tag_rating.max}`);
     }
   }
 
   return where;
 };
 const create_where_movie_tag_relationship = (
+  movieLabel: string,
+  relLabel: string,
   options: MovieTagRelationshipOptions
 ) => {
   const where: string[] = [];
-  const prefLabel = "p2";
-  const relLabel = "r";
+
   if (options) {
     const { cast_order, crew_job } = options;
 
     // ALL Tags
-    const MIN_ACTORS = 10;
-    cast_order.min > 0 &&
-      where.push(`(${relLabel}.order < ${cast_order.min}  OR r.order IS NULL)`);
+    cast_order > 0 &&
+      where.push(
+        `(${relLabel}.order < ${cast_order}  OR ${relLabel}.order IS NULL)`
+      );
 
     const crewJobQuery: string[] = [];
-    const DEFAULT_CREW_JOB = [
-      "Director",
-      "Screenplay",
-      "Writer",
-      "Director of Photography",
-      "Original Music Composer",
-      "Editor",
-      // "Art Direction",
-      // "Music",
-      // "Story",
-      // "Costume Design",
-      // "Novel",
-      // 'Production Design',
-      // "Animation",
-    ];
 
     crew_job.forEach((term) =>
       crewJobQuery.push(`${relLabel}.job = '${term}'`)
@@ -902,11 +1165,14 @@ const create_where_movie_tag_relationship = (
   return where;
 };
 
-const create_where_movie = (options: MovieOptions) => {
+const create_where_movie_properties = (
+  movieLabel: string,
+  options: MovieOptions
+) => {
   const where: string[] = [];
-  const label = "p2";
   if (options) {
     const {
+      title,
       movie_popularity,
       movie_rating,
       movie_release_date,
@@ -917,78 +1183,77 @@ const create_where_movie = (options: MovieOptions) => {
 
     // ALL Tags
     // TITLE
+    title && where.push(`${movieLabel}.title =~ '(?i).*${title}.*'`);
+
     // RATING
     movie_rating.min > 0 &&
-      where.push(`${label}.vote_average >= ${movie_rating.min}`);
+      where.push(`${movieLabel}.vote_average >= ${movie_rating.min}`);
     movie_rating.max > 0 &&
-      where.push(`${label}.vote_average <= ${movie_rating.max}`);
+      where.push(`${movieLabel}.vote_average <= ${movie_rating.max}`);
 
     // VOTES
     movie_votes.min > 0 &&
-      where.push(`${label}.vote_count >= ${movie_votes.min}`);
+      where.push(`${movieLabel}.vote_count >= ${movie_votes.min}`);
     movie_votes.max > 0 &&
-      where.push(`${label}.vote_count <= ${movie_votes.max}`);
+      where.push(`${movieLabel}.vote_count <= ${movie_votes.max}`);
 
     // POPULARITY
 
     movie_popularity.min > 0 &&
-      where.push(`${label}.popularity >= ${movie_popularity.min}`);
+      where.push(`${movieLabel}.popularity >= ${movie_popularity.min}`);
     movie_popularity.max > 0 &&
-      where.push(`${label}.popularity <= ${movie_popularity.max}`);
+      where.push(`${movieLabel}.popularity <= ${movie_popularity.max}`);
 
     // RUNTIME
     movie_runtime.min > 0 &&
-      where.push(`${label}.runtime >= ${movie_runtime.min}`);
+      where.push(`${movieLabel}.runtime >= ${movie_runtime.min}`);
     movie_runtime.max > 0 &&
-      where.push(`${label}.runtime <= ${movie_runtime.max}`);
+      where.push(`${movieLabel}.runtime <= ${movie_runtime.max}`);
 
     // RELEASE DATE
     movie_release_date.min > 0 &&
-      where.push(`${label}.release_date >= '${movie_release_date.min}-01-01'`);
+      where.push(
+        `${movieLabel}.release_date >= '${movie_release_date.min}-01-01'`
+      );
     movie_release_date.max > 0 &&
-      where.push(`${label}.release_date <= '${movie_release_date.max}-01-01'`);
+      where.push(
+        `${movieLabel}.release_date <= '${movie_release_date.max}-01-01'`
+      );
 
     // Person
-    const DEFAULT_IGNORE_STATUS: string[] = [
-      // "Rumored",
-      // "Planned",
-      // "In Production",
-      // "Post Production",
-      // "Released",
-      // "Canceled",
-    ];
     const status_query = movie_status.map(
-      (term) => `${label}.status <> '${term}'`
+      (term) => `${movieLabel}.status = '${term}'`
     );
     status_query.length && where.push(`(${status_query.join(" OR ")})`);
   }
 
   return where;
 };
-const create_where_movie_tag = (options: MovieTagOptions) => {
+const create_where_movie_tag_outside_relationship = (
+  movieLabel: string,
+  options: MovieTagOptions
+) => {
   const where: string[] = [];
-  const label = "p2";
   if (options) {
     const { tagsBlacklist, tagsOptional, tagsRequired, includeWatched } =
       options;
 
-    where.push(
-      `${
-        includeWatched || "NOT"
-      } EXISTS((:User {userId: $userId})-[:WATCHED]-(${label}))`
-    );
+    includeWatched ||
+      where.push(
+        `NOT EXISTS((:User {userId: $userId})-[:WATCHED|WATCHLIST]-(${movieLabel}))`
+      );
 
     tagsBlacklist.forEach((term) =>
-      where.push(`NOT EXISTS((${label})--(:Tag {name:'${term}'}))`)
+      where.push(`NOT EXISTS((${movieLabel})--(:Tag {name:'${term}'}))`)
     );
 
     tagsRequired.forEach((term) =>
-      where.push(`EXISTS((${label})--(:Tag {name:'${term}'}))`)
+      where.push(`EXISTS((${movieLabel})--(:Tag {name:'${term}'}))`)
     );
     const optionalQueries: string[] = [];
 
     tagsOptional.forEach((term) =>
-      optionalQueries.push(`EXISTS((${label})--(:Tag {name:'${term}'}))`)
+      optionalQueries.push(`EXISTS((${movieLabel})--(:Tag {name:'${term}'}))`)
     );
     optionalQueries.length &&
       where.push("(" + optionalQueries.join(" OR ") + ")");
@@ -1019,7 +1284,7 @@ export const recommendations_for_user_content = async (
     order_by_dir,
     page,
     per_page,
-    tag_department_label,
+    tag_department_labels,
     tag_idf_max,
     tag_idf_min,
     tag_popularity_max,
@@ -1027,28 +1292,35 @@ export const recommendations_for_user_content = async (
     tagsBlacklist,
     tagsOptional,
     tagsRequired,
+    tagsInCommon,
     useUserAvgRating,
     user_tag_frequency_min,
     user_tag_rating_min,
   } = options;
   // const where = create_filter_query(options);
-  const tagRelationshipWhere = create_where_tag_relationship({
+  const userTagRelationship = create_where_pref_tag_relationship("p1", "x", {
     useUserAvgRating,
     user_tag_frequency: { min: user_tag_frequency_min, max: -1 },
     user_tag_rating: { min: user_tag_rating_min, max: -1 },
   });
-  const tagWhere = create_where_tag({
+  const tagPropertiesWhere = create_where_tag_properties("k", {
     ignore_tags,
     tag_labels,
-    tag_department_label,
+    tag_department_labels,
     tag_idf: { max: tag_idf_max, min: tag_idf_min },
     tag_popularity: { max: tag_popularity_max, min: tag_popularity_min },
   });
-  const movieTagRelationshipWhere = create_where_movie_tag_relationship({
-    cast_order: { max: -1, min: 10 },
-    crew_job: ["Director", "Director of Photography", "Executive Producer"],
-  });
-  const movieWhere = create_where_movie({
+
+  const movieTagRelationshipWhere = create_where_movie_tag_relationship(
+    "p2",
+    "r",
+    {
+      cast_order: 5,
+      crew_job: ["Director", "Director of Photography"],
+    }
+  );
+  const movieWhere = create_where_movie_properties("p2", {
+    title: "",
     movie_runtime: { min: movie_runtime_min, max: movie_runtime_max },
     movie_votes: { min: movie_votes_min, max: movie_votes_max },
     movie_popularity: { max: movie_popularity_max, min: movie_popularity_min },
@@ -1059,28 +1331,40 @@ export const recommendations_for_user_content = async (
     },
     movie_status,
   });
-  const movieRelationshipsWhere = create_where_movie_tag({
-    tagsRequired,
-    includeWatched,
-    tagsBlacklist,
-    tagsOptional,
-  });
+  const movieRelationshipsWhere = create_where_movie_tag_outside_relationship(
+    "p2",
+    {
+      tagsRequired,
+      includeWatched,
+      tagsBlacklist,
+      tagsOptional,
+    }
+  );
 
-  const rating_weight = weight_rating("exponential", true, 10);
-  const tagPrefWhere = [...tagWhere, ...tagRelationshipWhere];
+  const rating_weight = weight_rating(
+    `x.rating`,
+    `p1.avg_rating`,
+    "sigmoid",
+    false,
+    10
+  );
+  const tagPrefWhere = [...tagPropertiesWhere, ...userTagRelationship];
   const tagPrefMovieWhere = [
-    ...tagWhere,
-    ...tagRelationshipWhere,
+    ...tagPropertiesWhere,
+    ...userTagRelationship,
     ...movieTagRelationshipWhere,
     ...movieWhere,
     ...movieRelationshipsWhere,
   ];
   const tagMovieWhere = [
-    ...tagWhere,
+    ...tagPropertiesWhere,
     ...movieWhere,
     ...movieTagRelationshipWhere,
     ...movieRelationshipsWhere,
   ];
+
+  const corr_avg = `((p2.vote_average * p2.vote_count)/(p2.vote_count + 2))`;
+  const p2_weight = weight_rating(corr_avg, `6.5`, "sigmoid", false, 10);
   // ${where.length ? "WHERE " + where.join(" AND ") : ""}
   return read(
     `MATCH (p1:Pref {userId: $userId})-[x:SCORED]-(k:Tag)
@@ -1094,12 +1378,14 @@ export const recommendations_for_user_content = async (
     ${tagPrefMovieWhere.length && "WHERE " + tagPrefMovieWhere.join(" AND ")}
 
     
-    WITH distinct k, ${rating_weight} * x.tf * k.idf * k.idf as weight, p1, x, p2, p1tfidf order by weight desc
+    WITH distinct k, ${rating_weight} * x.tf * k.idf * ${p2_weight} * k.idf as weight, p1, x, p2, p1tfidf order by weight desc
     
     WITH SUM( weight ) AS xyDotProduct,
     SQRT(REDUCE(xDot = 0.0, a IN p1tfidf | xDot + a^2)) AS xLength,
     p2,
     collect(k.name) as commonTags
+
+    WHERE size(commonTags) >= ${tagsInCommon}
     
     MATCH (p2)-[r]-(k:Tag)
     ${tagMovieWhere.length && "WHERE " + tagMovieWhere.join(" AND ")}
@@ -1107,7 +1393,7 @@ export const recommendations_for_user_content = async (
     xLength,
     p2,
     commonTags,
-    SQRT(REDUCE(yDot = 0.0, b IN COLLECT(k.idf) | yDot + b^2)) AS yLength
+    SQRT(REDUCE(yDot = 0.0, b IN COLLECT(${p2_weight} * k.idf) | yDot + b^2)) AS yLength
     
     WITH p2, xyDotProduct / (xLength * yLength) AS sim,commonTags
     
@@ -1146,32 +1432,143 @@ export const recommendations_for_user_content = async (
 };
 export const recommendations_for_movie_content = async (
   movieId: number,
-  options: OptionParameters
+  options: ContentRecommendFilters
 ) => {
+  const {
+    tag_labels,
+    ignore_tags,
+    includeWatched,
+    movie_popularity_max,
+    movie_popularity_min,
+    movie_rating_max,
+    movie_rating_min,
+    movie_release_date_max,
+    movie_release_date_min,
+    movie_runtime_max,
+    movie_runtime_min,
+    movie_status,
+    movie_votes_max,
+    movie_votes_min,
+    order_by,
+    order_by_dir,
+    page,
+    per_page,
+    tag_department_labels,
+    tag_idf_max,
+    tag_idf_min,
+    tag_popularity_max,
+    tag_popularity_min,
+    tagsBlacklist,
+    tagsOptional,
+    tagsRequired,
+    tagsInCommon,
+    useUserAvgRating,
+    user_tag_frequency_min,
+    user_tag_rating_min,
+  } = options;
   // const where = create_filter_query(options);
+  // const userTagRelationship = create_where_pref_tag_relationship("p1", "x", {
+  //   useUserAvgRating,
+  //   user_tag_frequency: { min: user_tag_frequency_min, max: -1 },
+  //   user_tag_rating: { min: user_tag_rating_min, max: -1 },
+  // });
+  const tagPropertiesWhere = create_where_tag_properties("k", {
+    ignore_tags,
+    tag_labels: [
+      "Genre",
+      "Crew",
+      "Cast",
+      "Keyword",
+      "Company",
+      "Language",
+      "Country",
+    ],
+    tag_department_labels,
+    tag_idf: { max: tag_idf_max, min: tag_idf_min },
+    tag_popularity: { max: tag_popularity_max, min: tag_popularity_min },
+  });
 
-  // const rating_weight = weight_rating("exponential", true);
+  const movieTagRelationshipWhere = create_where_movie_tag_relationship(
+    "p2",
+    "r",
+    {
+      cast_order: 5,
+      crew_job: ["Director", "Director of Photography"],
+    }
+  );
+  const movieWhere = create_where_movie_properties("p2", {
+    title: "",
+    movie_runtime: { min: movie_runtime_min, max: movie_runtime_max },
+    movie_votes: { min: movie_votes_min, max: movie_votes_max },
+    movie_popularity: { max: movie_popularity_max, min: movie_popularity_min },
+    movie_rating: { max: movie_rating_max, min: movie_rating_min },
+    movie_release_date: {
+      max: movie_release_date_max,
+      min: movie_release_date_min,
+    },
+    movie_status,
+  });
+  const movieRelationshipsWhere = create_where_movie_tag_outside_relationship(
+    "p2",
+    {
+      tagsRequired,
+      includeWatched: true,
+      tagsBlacklist,
+      tagsOptional,
+    }
+  );
+
+  const rating_weight = weight_rating(
+    `x.rating`,
+    `p1.avg_rating`,
+    "sigmoid",
+    false,
+    10
+  );
+  const tagPrefWhere = [...tagPropertiesWhere];
+  const tagPrefMovieWhere = [
+    ...tagPropertiesWhere,
+    ...movieTagRelationshipWhere,
+    ...movieWhere,
+    ...movieRelationshipsWhere,
+  ];
+  const tagMovieWhere = [
+    ...tagPropertiesWhere,
+    ...movieWhere,
+    ...movieTagRelationshipWhere,
+    ...movieRelationshipsWhere,
+  ];
+
+  const corr_avg_p1 = `((p1.vote_average * p1.vote_count)/(p1.vote_count + 2))`;
+  const p1_weight = weight_rating(corr_avg_p1, `6.5`, "sigmoid", false, 10);
+  const corr_avg = `((p2.vote_average * p2.vote_count)/(p2.vote_count + 2))`;
+  const p2_weight = weight_rating(corr_avg, `6.5`, "sigmoid", false, 10);
   // ${where.length ? "WHERE " + where.join(" AND ") : ""}
   return read(
     `MATCH (p1:Movie {movieId: $movieId})--(k:Tag)
-    WITH p1, collect(  k.idf ) as p1tfidf
+    ${tagPropertiesWhere.length && "WHERE " + tagPropertiesWhere.join(" AND ")}
+    WITH p1, collect( ${p1_weight} * k.idf ) as p1tfidf
+
     
-    MATCH (p1)--(k:Tag)--(p2:Movie)
-    WHERE p2.vote_count > 100 AND p2.runtime >= 45
-    
-    WITH distinct k,  k.idf *  k.idf as weight, p1, p2, p1tfidf
+    MATCH (p1)--(k:Tag)-[r]-(p2:Movie)
+    ${tagMovieWhere.length && "WHERE " + tagMovieWhere.join(" AND ")}
+  
+    WITH distinct k, ${p1_weight} * k.idf * ${p2_weight} *  k.idf as weight, p1, p2, p1tfidf order by weight desc
     
     WITH SUM( weight ) AS xyDotProduct,
     SQRT(REDUCE(xDot = 0.0, a IN p1tfidf | xDot + a^2)) AS xLength,
     p2,
-    collect(k) as commonTags
+    collect(k.name) as commonTags
+
+    WHERE size(commonTags) >= 5
     
-    MATCH (p2)--(k2:Tag)
+    MATCH (p2)-[r]-(k:Tag)
+    ${tagPropertiesWhere.length && "WHERE " + tagPropertiesWhere.join(" AND ")}
     WITH xyDotProduct,
     xLength,
     p2,
     commonTags,
-    SQRT(REDUCE(yDot = 0.0, b IN COLLECT( k2.idf) | yDot + b^2)) AS yLength
+    SQRT(REDUCE(yDot = 0.0, b IN COLLECT( ${p2_weight} * k.idf) | yDot + b^2)) AS yLength
     
     WITH p2, xyDotProduct / (xLength * yLength) AS sim,commonTags
     
@@ -1180,8 +1577,9 @@ export const recommendations_for_movie_content = async (
     WITH p2,sim, collect(k.name) as tags, commonTags 
     
     RETURN p2,commonTags,sim,tags
-    ORDER BY sim desc
-    LIMIT 100`,
+    ORDER BY sim ${order_by_dir} SKIP ${
+      (page - 1) * per_page
+    } LIMIT ${per_page}`,
     {
       movieId: movieId,
     }
@@ -1195,10 +1593,10 @@ export const recommendations_for_movie_content = async (
         const tags: string[] = r.get("tags");
 
         return {
-          // similarity,
-          ...new Movie(d).toJson(),
+          similarity,
+          details: new Movie(d).toJson(),
           // tags,
-          // common,
+          common: common.slice(0, 5),
         };
       });
     })
@@ -1208,35 +1606,154 @@ export const recommendations_for_movie_content = async (
 };
 export const recommendations_for_user_collaborative = async (
   userId: string,
-  options: OptionParameters
+  options: ContentRecommendFilters
 ) => {
+  const {
+    tag_labels,
+    ignore_tags,
+    includeWatched,
+    movie_popularity_max,
+    movie_popularity_min,
+    movie_rating_max,
+    movie_rating_min,
+    movie_release_date_max,
+    movie_release_date_min,
+    movie_runtime_max,
+    movie_runtime_min,
+    movie_status,
+    movie_votes_max,
+    movie_votes_min,
+    order_by,
+    order_by_dir,
+    page,
+    per_page,
+    tag_department_labels,
+    tag_idf_max,
+    tag_idf_min,
+    tag_popularity_max,
+    tag_popularity_min,
+    tagsBlacklist,
+    tagsOptional,
+    tagsRequired,
+    tagsInCommon,
+    useUserAvgRating,
+    user_tag_frequency_min,
+    user_tag_rating_min,
+  } = options;
   // const where = create_filter_query(options);
+  // const userTagRelationship = create_where_pref_tag_relationship("p1", "x", {
+  //   useUserAvgRating,
+  //   user_tag_frequency: { min: user_tag_frequency_min, max: -1 },
+  //   user_tag_rating: { min: user_tag_rating_min, max: -1 },
+  // });
+  const tagPropertiesWhere = create_where_tag_properties("k", {
+    ignore_tags,
+    tag_labels: [
+      "Genre",
+      "Crew",
+      "Cast",
+      "Keyword",
+      "Company",
+      "Language",
+      "Country",
+    ],
+    tag_department_labels,
+    tag_idf: { max: tag_idf_max, min: tag_idf_min },
+    tag_popularity: { max: tag_popularity_max, min: tag_popularity_min },
+  });
 
-  // const weighting = f("cubic");
+  const movieTagRelationshipWhere = create_where_movie_tag_relationship(
+    "p2",
+    "r",
+    {
+      cast_order: 5,
+      crew_job: ["Director", "Director of Photography"],
+    }
+  );
+  const movieWhere = create_where_movie_properties("m", {
+    title: "",
+    movie_runtime: { min: movie_runtime_min, max: movie_runtime_max },
+    movie_votes: { min: movie_votes_min, max: movie_votes_max },
+    movie_popularity: { max: movie_popularity_max, min: movie_popularity_min },
+    movie_rating: { max: movie_rating_max, min: movie_rating_min },
+    movie_release_date: {
+      max: movie_release_date_max,
+      min: movie_release_date_min,
+    },
+    movie_status,
+  });
+  const movieRelationshipsWhere = create_where_movie_tag_outside_relationship(
+    "m",
+    {
+      tagsRequired,
+      includeWatched: true,
+      tagsBlacklist,
+      tagsOptional,
+    }
+  );
+
+  const corr_avg = `((1.0 * m.vote_average * m.vote_count)/(1.0 * m.vote_count + 2))`;
+
+  // `MATCH (u1:User {userId: $userId})-[r:WATCHED]-(m:Movie)
+  // WITH u1, avg(r.rating) AS u1_mean
+
+  // MATCH (u1)-[r1:WATCHED]-(m:Movie)-[r2:WATCHED]-(u2)
+  // WITH u1, u1_mean, u2, COLLECT({r1: r1, r2: r2}) AS ratings
+  // WHERE size(ratings) >= 30
+
+  // MATCH (u2)-[r:WATCHED]-(m:Movie)
+  // WITH u1, u1_mean, u2, avg(r.rating) AS u2_mean, ratings
+
+  // UNWIND ratings AS r
+
+  // WITH sum( (r.r1.rating-u1_mean) * (r.r2.rating-u2_mean) ) AS nom,
+  //      sqrt( sum( (r.r1.rating - u1_mean)^2) * sum( (r.r2.rating - u2_mean) ^2)) AS denom,
+  //      u1, u2 WHERE denom <> 0
+
+  // WITH u1, u2, nom/denom AS pearson
+  // ORDER BY pearson DESC
+
+  // MATCH (u2)-[r:WATCHED]-(m:Movie)
+  // WHERE NOT EXISTS((u1)-[:WATCHED|WATCHLIST]-(m))
+  // AND u2.avg_rating < r.rating
+  // RETURN distinct m.movieId as q,m, u2.userId as user, r.rating as user_score, SUM( 1.0 * pearson * (1.0 * r.rating / 10) * (1.0 * ${corr_avg} / 10) ) AS score
+  // ORDER BY score DESC, r.rating DESC, m.vote_average DESC SKIP ${
+  //   (page - 1) * per_page
+  // } LIMIT ${per_page}`,
+
   return read(
     `MATCH (u1:User {userId: $userId})-[r:WATCHED]-(m:Movie)
     WITH u1, avg(r.rating) AS u1_mean
     
     MATCH (u1)-[r1:WATCHED]-(m:Movie)-[r2:WATCHED]-(u2)
+    WHERE exists((u1)-[:FOLLOWING]-(u2))
+    
     WITH u1, u1_mean, u2, COLLECT({r1: r1, r2: r2}) AS ratings
+    // WHERE size(ratings) >= 30
     
     MATCH (u2)-[r:WATCHED]-(m:Movie)
-    WITH u1, u1_mean, u2, avg(r.rating) AS u2_mean, ratings
+    WITH  u1, u1_mean, u2, avg(r.rating) AS u2_mean, ratings  
     
     UNWIND ratings AS r
     
     WITH sum( (r.r1.rating-u1_mean) * (r.r2.rating-u2_mean) ) AS nom,
-         sqrt( sum( (r.r1.rating - u1_mean)^2) * sum( (r.r2.rating - u2_mean) ^2)) AS denom,
-         u1, u2 WHERE denom <> 0
+            sqrt( sum( (r.r1.rating - u1_mean)^2) * sum( (r.r2.rating - u2_mean) ^2)) AS denom,
+            u1, u2 WHERE denom <> 0
     
     WITH u1, u2, nom/denom AS pearson
     ORDER BY pearson DESC
     
     MATCH (u2)-[r:WATCHED]-(m:Movie) 
-    WHERE NOT EXISTS( (u1)-[:WATCHED]-(m) )
+    WHERE NOT EXISTS((u1)-[:WATCHED|WATCHLIST]-(m))
     AND u2.avg_rating < r.rating
-    RETURN m,u2.userId as user,r.rating as user_score, SUM( pearson * r.rating) AS score
-    ORDER BY score DESC, m.vote_average DESC LIMIT 100`,
+    
+    WITH u2, r, m, ((1.0 * pearson + (1.0 * r.rating / 10.0) + (1.0 * ${corr_avg} / 10.0)) / 3.0) as score order by score desc
+    
+    WITH  m, collect(u2.userId) as users, collect(r.rating) as user_ratings, collect(score) as scores
+    RETURN m, users[0] as user, user_ratings[0] as user_rating, scores[0] as score  
+    ORDER BY score DESC, user_rating DESC, m.vote_average DESC SKIP ${
+      (page - 1) * per_page
+    } LIMIT ${per_page}`,
     {
       userId: userId,
     }
@@ -1247,14 +1764,13 @@ export const recommendations_for_user_collaborative = async (
 
         const similarity = r.get("score");
         const because_of = r.get("user");
-        const user_score = r.get("user_score");
+        const user_score = r.get("user_rating");
 
         return {
           similarity,
           because_of,
           user_score: toNumber(user_score),
-          ...new Movie(d).toJson(),
-          // tags,
+          details: new Movie(d).toJson(),
         };
       });
     })
